@@ -1,0 +1,87 @@
+# HIBA Extensions
+
+## Type of extensions supported by HIBA
+
+HIBA supports two kinds of extensions:
+
+| Name       | Target            | Description                                 |
+| ---------- | ----------------- | ------------------------------------------- |
+| identity   | Host certificate  | Defines the identity of host, used to match |
+:            :                   : grants at connection time.                  :
+| grant      | User certificate  | Defines which identity this certificate     |
+:            :                   : gives access to.                            :
+
+## Overall format
+
+Each extension is a list of key/value pairs and is following the openssh
+serialized format. The extension content also contains a header that describes
+the type, the version and a minimum supported version that allows backward
+incompatible changes. The last field is a count of the number of key/value
+pairs.
+
+```
+	uint32  magic
+	uint32  type
+	uint32  vers
+	uint32  min_vers
+	uint32  npairs
+```
+
+Where magic is defined as:
+
+```
+#define HIBA_MAGIC		0x48494241
+```
+
+Where type is defined by the following:
+
+```
+#define HIBA_UNKNOWN_EXT	0
+#define HIBA_IDENTITY_EXT	'i'
+#define HIBA_GRANT_EXT		'g'
+```
+
+The current version starts at 1, and so does minimum supported version.
+
+The rest of the data is a list of strings key1, value1, key2, value2, ...
+There must be exactly one value per key.
+
+The extension can be stored directly in the above described serialized binary
+format or optionally base64 encoded for simpler handling by shell tools and
+wrappers.
+
+## Extensions ID
+
+The HIBA extensions are identified by the following IDs:
+
+* `identity@hibassh.dev`: a host certificate can only have one
+  identity extension attached.
+* `grant@hibassh.dev`: a user certificate can have an arbitrary
+  number of grant extensions attached. Access will be granted if any grant
+  extension matches.
+
+## Special extension keys
+
+HIBA reserves five extension keys with a special meaning:
+
+| Key       | Description                                                      |
+| --------- | -----------------------------------------------------------------|
+| hostname  | The hostname constraint used in a HIBA grant is directly checked |
+:           : against the hostname of the target host as returned by the       :
+:           : gethostname() syscall, even if no host certificate is present on :
+:           : the target host. This allows a low-level last resort way to      :
+:           : contact a host that has a corrupted host certificate or identity :
+:           : extension.                                                       :
+| domain    | The domain constraint used in a HIBA grant is checked against the|
+:           : corresponding HIBA identity, but this key is mandatory in both   :
+:           : extensions. This allows preventing inadvertantly granting wide   :
+:           : privileges when managing different domains using the same CA key :
+| options   | The list of SSH options to be applied to this SSH connection, as |
+:           : they would be listed in an authorized_users or authorized_keys   :
+:           : file.                                                            :
+| validity  | The duration in seconds from the supporting certificate issued   |
+:           : date. This means that a certificate can have unlimited validity, :
+:           : but some of the grants attached would be able to expire          :
+:           : independently.                                                   :
+| role      | The target requested role to grant access to. This can be the    |
+:           : principal itself or any other role available on the target host. :
