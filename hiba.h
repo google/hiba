@@ -12,6 +12,8 @@
 extern "C" {
 #endif  // __cplusplus
 
+#include "certificates.h"
+#include "errors.h"
 #include "extensions.h"
 
 #ifdef __cplusplus
