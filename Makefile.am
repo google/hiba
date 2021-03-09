@@ -18,3 +18,11 @@ lib_LTLIBRARIES = libhiba.la
 libhiba_la_SOURCES = extensions.c errors.c checks.c certificates.c
 libhiba_la_CFLAGS =
 libhiba_la_LDFLAGS = $(VERSION_INFO)
+
+sbin_PROGRAMS = hiba-gen
+
+hiba_gen_SOURCES = hiba-gen.c util.c
+hiba_gen_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat -lcrypto
+hiba_gen_DEPENDENCIES = libhiba.a
+
+man1_MANS = hiba-gen.1

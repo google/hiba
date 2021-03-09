@@ -1,0 +1,91 @@
+.\" Copyright 2021 The HIBA Authors
+.\"
+.\" Use of this source code is governed by a BSD-style
+.\" license that can be found in the LICENSE file or at
+.\" https://developers.google.com/open-source/licenses/bsd
+.TH HIBA-GEN 1 "Dec, 1 2020"
+.SH NAME
+hiba-gen - Generate and displays HIBA extensions.
+.SH SYNOSPSIS
+.SS Generate extensions
+.B hiba-gen
+.RI "[-v] -f " "file" " " "key1" " " "value1" ...
+.br
+.B hiba-gen
+.RI "[-v] -i -f " "file" " " "key1" " " "value1" ...
+.SS Decode extensions
+.B hiba-gen
+.RI "[-v] -d -f " "file"
+.br
+.B hiba-gen
+.RI "[-v] -d -f " "content"
+.SH DESCRIPTION
+.B hiba-gen
+is used to generate HIBA extensions (grants or identities) that can be later added to a certificate by a Certificate Authority during the sign operation. The content of the extension is given by a list of
+.RI "" "key" " / " "value" " pairs appended to the command line (see " "EXAMPLE" ")."
+.PP
+.B hiba-gen
+can also be used to display the content of raw extension files or extensions attached to a certificate. The extension to decode can be passed either as a filename or directly as the content of the extension to decode.
+.RI "The human readbale content is printed on " "STDOUT" "."
+.PP
+.B hiba-gen
+output is meant for human consumption and must not be used for permission verification.
+.RI "Instead, use " "hiba-chk(1)" " for computing authorizations."
+
+.SH OPTIONS
+This program only accepts short options (single dash).
+.TP
+.B \-v
+Turn on verbose mode. This flag can be repeated up to 3 times for increased verbosity.
+.TP
+.B \-i
+Generate a host extension instead of a grant. Only used for encoding HIBA extensions.
+.TP
+.B \-d
+Decode the HIBA extension passed by -f
+.I file
+rather than generate it.
+.TP
+.B \-f
+Path where to store the generated extension, path to read the extension to decode from, or content of the extension to decode.
+.SH NOTES
+HIBA reserves a few extension keys with a special meaning. All the other keys are available at the user discretion. The keys used in the identity of a host define the HIBA
+.I SCHEMA
+in a flexible way. This means that a HIBA grant can only match an identity if the HIBA grant's keys are a subset of the identity's keys it is compared against.
+.RI "See " "hiba-chk(1)" " for more information about grants matching and authorizations."
+.TP 16
+.B domain
+.RI "[mandatory]. Used to loosely describe the " "SCHEMA" " to be used for grant matching."
+.TP
+.B hostname
+.RI "[not in identities]. Used in grants to be compared against the return of the " "gethostname" " system call."
+.TP
+.B role
+.RI "[not in identities]. Used in grants to be compared against the request role."
+.TP
+.B validity
+.RI "[not in identities]. Number of seconds for which the grant is valid after the " "valid_after" " field of the supporting certificate."
+.TP
+.B options
+.RI "[not in identities]. Used in grants to tune the SSH connection. Refer to the " "sshd(1)" " manpage, " "AUTHORIZED_KEYS FILE FORMAT" " section for the details on available options."
+.SH EXAMPLE
+.RS 4
+.nf
+$ hiba-gen -i -f host.hiba domain google.com owner hiba
+$ hiba-gen -d -f host.hiba
+identity@hibassh.dev (v1):
+ [0] domain = 'google.com'
+ [1] owner = 'hiba'
+
+$ hiba-gen -f user.hiba domain google.com role user validity 900
+$ hiba-gen -d -f user.hiba
+grant@hibassh.dev (v1):
+ [0] domain = 'google.com'
+ [1] role = 'user'
+ [2] validity = '900'  # 15 min
+.fi
+.SH SEE ALSO
+.BR hiba-ca.sh (1),
+.BR hiba-chk (1),
+.BR ssh-keygen (1)
+.BR sshd (1)
