@@ -1,0 +1,59 @@
+# Authorization Checks
+
+## Grant evaluations
+
+Grants are evaluated in order, and the first matching grant will be used for
+authorization. When `options` are defined, care should be taken to require the
+least restrictive grant first, so that the user doesn't end up locked up.
+
+Example:
+
+  For an SSH certificate containing 2 extensions in the following order:
+  1. allow SSH as root with force command set to 'hostname' on all targets
+  2. allow SSH as root with no force command on testing targets
+
+  The first grant will always match and the second grant will never be
+  evaluated. SSH on test host targets will never return a shell but instead run
+  `hostname` as root.
+
+  A better option would be to invert the order as:
+  1. allow SSH as root with no force command on testing targets
+  2. allow SSH as root with force command set to 'hostname' on all targets
+
+  In this case, the first grant will match test host targets and allow a shell,
+  while any non-test host will fail evaluation of the first grant, succeed on
+  the second one and run `hostname` as root.
+
+Note: the certificate authority *MUST* respect the order that the user used when
+requesting the grants.
+
+HIBA enforces the following:
+
+* any field present in the identity but missing from the grant is considered as
+  matching (no constraint)
+* any field present in the grant but missing from the identity is considered as
+  failing (unknown constraint)
+* any field present in both the grant and the identity will be evaluated based
+  on the rules described below.
+
+## Constraints matching
+
+The constraints are compared between the identity and the grant extensions
+using the C library `fnmatch` function. See `man 3 fnmatch` for more details
+about the matching capabilities.
+
+The reserved keys are evaluated as follows:
+
+* role: evaluated as a normal constraint against the requested role.
+* hostname: evaluated as a normal constraint against the hostname system call.
+* domain: evaluated as a normal constraint against the identity domain.
+  Authorization fails if missing.
+* validity: evaluated as integer number of seconds, upper bound for the
+  difference between the current time and the certificate `valid_after` field.
+* options: not evaluated, only used to tune the resulting authorization when a
+  grant is matching.
+
+## Repeated keys in grant extension
+
+If a key is repeated in the grant, it will be considered a match if one of the
+repeated values is matching the host value.

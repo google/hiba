@@ -13,6 +13,7 @@ configure
 install-sh
 libhiba.la
 libhiba_la-certificates.lo
+libhiba_la-checks.lo
 libhiba_la-errors.lo
 libhiba_la-extensions.lo
 .libs/
