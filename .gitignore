@@ -1,5 +1,6 @@
 *.o
 *.a
+hiba-chk
 hiba-gen
 aclocal.m4
 autom4te.cache
