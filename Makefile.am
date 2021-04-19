@@ -29,4 +29,6 @@ hiba_gen_SOURCES = hiba-gen.c util.c
 hiba_gen_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat -lcrypto
 hiba_gen_DEPENDENCIES = libhiba.a
 
-man1_MANS = hiba-chk.1 hiba-gen.1
+dist_sbin_SCRIPTS = hiba-ca.sh
+
+man1_MANS = hiba-chk.1 hiba-gen.1 hiba-ca.sh.1

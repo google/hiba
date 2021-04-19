@@ -1,0 +1,199 @@
+.\" Copyright 2021 The HIBA Authors
+.\"
+.\" Use of this source code is governed by a BSD-style
+.\" license that can be found in the LICENSE file or at
+.\" https://developers.google.com/open-source/licenses/bsd
+.TH HIBA-CHK 1 "Dec, 1 2020"
+.SH NAME
+hiba-ca - Basic command line Certificate Authority with HIBA support.
+.SH SYNOSPSIS
+.SS Create a new CA
+.B hiba-ca.sh
+.RI "-c [-d " "capath" "] -- " "additional ssh-keygen options"
+.SS Create a user/host identity
+.B hiba-ca.sh
+.RI "-c [-d " "capath" "] -u -I " "username" " -- " "additional ssh-keygen options"
+.br
+.B hiba-ca.sh
+.RI "-c [-d " "capath" "] -h -I " "hostname" " -- " "additional ssh-keygen options"
+.SS Import a user/host identity
+.B hiba-ca.sh
+.RI "-i [-d " "capath" "] [-I " "username" "] -u -f " "filename"
+.br
+.B hiba-ca.sh
+.RI "-i [-d " "capath" "] [-I " "hostname" "] -h -f " "filename"
+.SS Remove a user/host identity
+.B hiba-ca.sh
+.RI "-r [-d " "capath" "] -I " "username" " -u "
+.br
+.B hiba-ca.sh
+.RI "-r [-d " "capath" "] -I " "hostname" " -h "
+.SS Add policy permissions
+.B hiba-ca.sh
+.RI "-p [-d " "capath" "] -I " "username" " -H " "grant_name"
+.SS Remove policy permissions
+.B hiba-ca.sh
+.RI "-p -r [-d " "capath" "] -I " "username" " -H " "grant_name"
+.SS List CA content (doesn't show any secrets)
+.B hiba-ca.sh
+.RI "-l [-d " "capath" "] [-u] [-h] [-p]"
+.SS Sign a user/host certificate
+.B hiba-ca.sh
+.RI "-s [-d " "capath" "] [-n " "principal" "] [-V " "validity" "] [-H " "HIBA" "] -u -I " "username" " -- " "additional ssh-keygen options"
+.br
+.B hiba-ca.sh
+.RI "-s [-d " "capath" "] [-n " "principal" "] [-V " "validity" "] [-H " "HIBA" "] -h -I " "hostname" " -- " "additional ssh-keygen options"
+.SH DESCRIPTION
+.B hiba-ca.sh
+implements a basic Certificate Authority managed by the command line that supports several operations:
+.nr step 1 1
+.IP \n[step] 2
+Create a CA key pair.
+.IP \n+[step]
+Create, import or remove a user/host key pair.
+.IP \n+[step]
+Add or Remove permissions for a user to request HIBA grants.
+.IP \n+[step]
+Sign a user/host public key into a certificate, optionally attaching HIBA grants.
+.PP
+The Certificate Authority stores all the keys on disk, following a predefined structure.
+This predefined structure allows to reference SSH identities as well as HIBA extensions directly by name.
+It expects the HIBA extensions to be generated in the following folders:
+.IP \[bu] 2
+.IR "capath" "/policy/identities/" "identity_name"
+.IP \[bu]
+.IR "capath" "/policy/grants/" "grant_name"
+.PP
+And keeps the SSH identities in the following folders:
+.IP \[bu] 2
+.IR "capath" "/users/" "username"
+.IP \[bu]
+.IR "capath" "/users/" "username" ".pub"
+.IP \[bu]
+.IR "capath" "/users/" "username" "-cert.pub"
+.IP \[bu]
+.IR "capath" "/hosts/" "hostname"
+.IP \[bu]
+.IR "capath" "/hosts/" "hostname" ".pub"
+.IP \[bu]
+.IR "capath" "/hosts/" "hostname" "-cert.pub"
+.PP
+The policy permissions are managed via symlinks in the following folder:
+.IP \[bu] 2
+.IR "capath" "/policy/principals/" "username" "/" "grant_name1" " -> "
+.IR "capath" "/policy/grants/" "grant_name1"
+.IP \[bu]
+.IR "capath" "/policy/principals/" "username" "/" "grant_name2" " -> "
+.IR "capath" "/policy/grants/" "grant_name2"
+.IP \[bu]
+.RI ...
+.SH OPTIONS
+This program only accepts short options.
+.TP
+.B \-c
+Create new identities (CA, user or host).
+.TP
+.B \-l
+Show the content of the certificate authority (not showing any secrets).
+.TP
+.B \-i
+Import new identities (user or host).
+.TP
+.B \-r
+Remove existing identities (user or host). When used with -p, remove HIBA policy permission.
+.TP
+.B \-p
+.RI "Add HIBA policy permission on a " "grant" " for a " "user" ". When used with -r, remove said permission.
+.TP
+.B \-s
+Sign certificates (user or host).
+.TP
+.B \-d
+.IR "capath" " of the CA (will be initialized on the first call if it doesn't exist yet). Default to ~/.hiba-ca."
+.TP
+.B \-u
+.RI "Request creating/importing/removing/signing a " "user" " certificate. When used with -l, shows information about users."
+.TP
+.B \-h
+.RI "Request creating/importing/removing/signing a " "host" " certificate. When used with -l, shows information about hosts."
+.TP
+.B \-I
+.RI "The " "name" " of the identity to create/sign. This is also used as the main " "principal" " during the signing operation."
+.TP
+.B \-n
+.RI "Extra " "principal" " to add to the certificate. This flag can be repeated for adding more than one " "principal" "."
+.TP
+.B \-V
+.IR "validity" " to set to the certificate. Default to '+1h'. See " "ssh-keygen(1)" " for the expected syntax."
+.TP
+.B \-z
+.IR "serial" " to set to the certificate. THis is useful when planning to work with " "KRL" " and/or " "GRL" ". Default '0'."
+.TP
+.B \-H
+.RI "Name of the " "HIBA" " extensions to be attached to the certificate at signing time. This flag can be repeated for adding more than one " "HIBA" " extension. When used with -p this lists extensions to be added/removed."
+.SH NOTES
+.RI "When the " "hiba-ca.sh" " generates the users & hosts private keys, it is for convenience only. It is not required to leave the private keys in the " "capath" ".
+.SH EXAMPLE
+.SS Creating a new CA
+.RS 4
+.nf
+$ hiba-ca.sh -c -d /tmp/myca
+== Generating CA keys in /tmp/myca/ca
+Enter passphrase (empty for no passphrase): *******
+Enter same passphrase again: *******
+== Done
+.fi
+.SS Creating SSH identities
+.RS 4
+.nf
+$ hiba-ca.sh -c -d /tmp/myca -u -I user1
+== Generating user keys in /tmp/myca/users/user1
+Enter passphrase (empty for no passphrase): *******
+Enter same passphrase again: *******
+== Done
+Identity created: Private: /tmp/myca/users/user1
+                  Public:  /tmp/myca/users/user1.pub
+.fi
+.SS Adding a HIBA extension to collection
+.RS 4
+.nf
+$ hiba-gen -f /tmp/myca/policy/grants/o:user1 domain google.com owner user1
+$ hiba-gen -d -f /tmp/myca/policy/grants/o:user1
+grant@hibassh.dev (v1):
+ [0] domain = 'google.com'
+ [1] owner = 'user1'
+.SS Granting user1 permissions to request grant o:user1
+.RS 4
+.nf
+$ hiba-ca.sh -p -d /tmp/myca -I user1 -H o:user1
+== Done ==
+User user1 is now eligible for [o:user1]
+.fi
+.SS Signing SSH identities
+.RS 4
+.nf
+$ hiba-ca.sh -s -d /tmp/myca -u -I user1 -H o:user1
+== Signing user key ID user1
+Signed user key /tmp/myca/users/user1-cert.pub: id "user1" serial 0 for user1 valid from 2020-11-29T19:00:00 to 2020-11-29T20:01:46
+== Done
+Certificate created: /tmp/myca/users/user1-pub.cert
+$ hiba-gen -d -f /tmp/myca/users/user1-cert.pub
+certificate 'user1' contains 1 HIBA grants
+grant@hibassh.dev (v1):
+ [0] domain = 'google.com'
+ [1] owner = 'user1'
+.fi
+.SS Removing HIBA permission
+.RS 4
+.nf
+$ hiba-ca.sh -p -r -d /tmp/myca -I user1 -H o:user1
+== Done ==
+User user1 is not eligible anymore for [o:user1]
+$ hiba-ca.sh -s -d /tmp/myca -u -I user1 -H o:user1
+user user1 not eligible for grant o:user1
+== ERROR ==
+.fi
+.SH SEE ALSO
+.BR hiba-chk (1),
+.BR hiba-gen (1),
+.BR ssh-keygen (1)
