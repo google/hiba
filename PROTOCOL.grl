@@ -1,0 +1,27 @@
+# Grant Revocation List
+
+## Purpose
+
+This file allows to selectively revoke one or several grants from a
+certificate without revoking all the grants or the certificate itself.
+
+## Format
+
+The format of this file follows the openssh KRL format for certificates
+(KRL_SECTION_CERTIFICATES) by serial + bitmap (KRL_SECTION_CERT_SERIAL_BITMAP).
+
+In this case, while the format is consistent with openssh KRL file, the
+semantic is slightly different. The GRL serial points to a given certificate,
+while the bitmap is used to target the grants inside this certificate.
+
+```
+	uint64  serial_offset
+	mpint   revoked_grants_bitmap
+```
+
+This file is read by the hiba-helper only and must be pushed by the host owner
+similarly to the openssh KRL.
+
+Note: It is the CA owner's responsibility to assess the trade off between the
+need to push a GRL file periodically and the maximum allowed validity of HIBA
+grants within a certificate.
