@@ -116,3 +116,14 @@ And the KnownHost file can be generate with:
 ```
 $ echo "@cert-authority * $(cat /etc/ssh/ca.pub)" > /etc/ssh/known_hosts
 ```
+
+## Testing
+
+For testing HIBA on a local setup, the `testdata/setup-local.sh` script is
+provided. This script will:
+
+* Generate the test CA and all keys
+* Generate demo HIBA extensions
+* Sign the certificates with extensions
+* Generate ssh client and server configs
+* Start 2 local sshd servers (simulating 2 different hosts)
