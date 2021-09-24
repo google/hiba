@@ -58,9 +58,9 @@ hiba-gen -f "$dest/policy/grants/locked" domain host.local owner localuser purpo
 hiba-ca.sh -d "$dest" -p -I localuser -H shell -H locked
 
 # Sign ssh certificate
-hiba-ca.sh -s -d "$dest" -h -I localhost1 -n localhost -n "$(hostname)" -m prod -- -P "" || exit 1
-hiba-ca.sh -s -d "$dest" -h -I localhost2 -n localhost -n "$(hostname)" -m testing -- -P "" || exit 1
-hiba-ca.sh -s -d "$dest" -u -I localuser -m shell -m locked -- -P "" || exit 1
+hiba-ca.sh -s -d "$dest" -h -I localhost1 -n localhost -n "$(hostname)" -H prod -- -P "" || exit 1
+hiba-ca.sh -s -d "$dest" -h -I localhost2 -n localhost -n "$(hostname)" -H testing -- -P "" || exit 1
+hiba-ca.sh -s -d "$dest" -u -I localuser -H shell -H locked -- -P "" || exit 1
 
 # Generate custom banner
 cat > "$dest/banner" << _EOF
