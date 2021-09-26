@@ -39,7 +39,7 @@ An example of a host identity could be:
 
 This is also a custom extension, attached to user certificates that describes
 which hosts this certificate should be accepted on. The grant contains a set of
-constraints that a host much match for the access to be authorized. These
+constraints that a host must match for the access to be authorized. These
 constraints are compared to the host identity at connection time by the hiba-chk
 helper. Due to the flexible nature of the host identity, the following
 semantics apply:
@@ -69,9 +69,9 @@ HIBA allows revoking individual grants rather than the whole certificate. See
 [PROTOCOL.grl](PROTOCOL.grl) for more information.
 
 Note: revocations at the grant granularity are not yet supported. The rationale
-for not priotizing these: full SSH certificate revocation is already supported
+for not prioritizing these: full SSH certificate revocation is already supported
 by OpenSSH, only the finer granularity is lacking. Also, it is good practice
-to rely on short lived certificates, which often expire before the reovcation\
+to rely on short lived certificates, which often expire before the revocation
 list makes it to the target host.
 
 ## Prerequisites
