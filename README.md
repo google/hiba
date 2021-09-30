@@ -13,7 +13,7 @@ The authorization is performed directly on the target host based on the user
 certificate content and the local host identity only. Not accessing external
 services makes it suitable for low dependency, last resort, SSH access.
 
-For more details on how authorization are computed, see
+For more details on how authorization is computed, see
 [PROTOCOL.authorizations](https://github.com/google/hiba/blob/main/PROTOCOL.authorizations).
 
 ## Concepts
