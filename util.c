@@ -42,7 +42,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 	*outext = NULL;
 
 	if (strcmp(file, "-") != 0 && stat(file, &st) == -1) {
-		if (errno != ENOENT) {
+		if ((errno != ENOENT) && (errno != ENAMETOOLONG)) {
 			fatal("decode_file: %s: %s", file, strerror(errno));
 		}
 		debug2("decode_file: reading from command line");
