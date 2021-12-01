@@ -26,8 +26,8 @@
 /*
  * HIBA Extensions IDs
  */
-#define HIBA_IDENTITY_ID "identity@hibassh.dev";
-#define HIBA_GRANT_ID "grant@hibassh.dev";
+#define HIBA_IDENTITY_ID "identity@hibassh.dev"
+#define HIBA_GRANT_ID "grant@hibassh.dev"
 
 /*
  * HIBA pre defined options
