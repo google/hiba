@@ -42,8 +42,8 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: create identities"
-RUN ../hiba-gen -i -f "$dest/policy/identities/owner:user1" domain hiba.com owner user1 purpose production
-RUN ../hiba-gen -i -f "$dest/policy/identities/owner:user2" domain hiba.com owner user2 purpose testing
+RUN ../hiba-gen -i -f "$dest/policy/identities/owner:user1" domain hibassh.dev owner user1 purpose production
+RUN ../hiba-gen -i -f "$dest/policy/identities/owner:user2" domain hibassh.dev owner user2 purpose testing
 EXPECT_EXISTS "$dest/policy/identities/owner:user1"
 EXPECT_EXISTS "$dest/policy/identities/owner:user2"
 SUCCESS
@@ -51,13 +51,13 @@ SUCCESS
 
 START_TEST "hiba-gen: display identities"
 EXPECTED="identity@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] owner = 'user1'
  [2] purpose = 'production'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/identities/owner:user1")
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECTED="identity@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] owner = 'user2'
  [2] purpose = 'testing'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/identities/owner:user2")
@@ -66,12 +66,12 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: create grants"
-RUN ../hiba-gen -f "$dest/policy/grants/location:eu" domain hiba.com location EU &>> "$log"
-RUN ../hiba-gen -f "$dest/policy/grants/purpose:testing" domain hiba.com purpose testing role tester &>> "$log"
-RUN ../hiba-gen -f "$dest/policy/grants/lockedcmd" domain hiba.com options 'command="uname -a"' &>> "$log"
-RUN ../hiba-gen -f "$dest/policy/grants/badcmd" domain hiba.com options "command=uname -a" &>> "$log"
-RUN ../hiba-gen -f "$dest/policy/grants/all" domain hiba.com &>> "$log"
-RUN ../hiba-gen -f "$dest/policy/grants/disallowed" domain hiba.com &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/location:eu" domain hibassh.dev location EU &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/purpose:testing" domain hibassh.dev purpose testing role tester &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/lockedcmd" domain hibassh.dev options 'command="uname -a"' &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/badcmd" domain hibassh.dev options "command=uname -a" &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/all" domain hibassh.dev &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/disallowed" domain hibassh.dev &>> "$log"
 EXPECT_EXISTS "$dest/policy/grants/all"
 EXPECT_EXISTS "$dest/policy/grants/location:eu"
 EXPECT_EXISTS "$dest/policy/grants/purpose:testing"
@@ -107,18 +107,18 @@ SUCCESS
 
 START_TEST "hiba-gen: display grants"
 EXPECTED="grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] location = 'EU'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/grants/location:eu")
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECTED="grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] purpose = 'testing'
  [2] role = 'tester'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/grants/purpose:testing")
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECTED="grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'"
+ [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/grants/all")
 EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
@@ -126,7 +126,7 @@ SUCCESS
 
 START_TEST "hiba-gen: grant in cmdline"
 EXPECTED="grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] location = 'EU'"
 GOT=$(RUN ../hiba-gen -d -f "$(cat $dest/policy/grants/location:eu)")
 EXPECT_EQ "$EXPECTED" "$GOT"
@@ -162,15 +162,15 @@ SUCCESS
 START_TEST "hiba-gen: display certificates"
 EXPECTED="certificate 'user1' contains 1 HIBA grants
 grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'"
+ [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/users/user1-cert.pub")
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECTED="certificate 'user2' contains 2 HIBA grants
 grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] location = 'EU'
 grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'
+ [0] domain = 'hibassh.dev'
  [1] purpose = 'testing'
  [2] role = 'tester'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/users/user2-cert.pub")
@@ -181,7 +181,7 @@ SUCCESS
 START_TEST "hiba-gen: certificate in cmdline"
 EXPECTED="certificate 'user1' contains 1 HIBA grants
 grant@hibassh.dev (v1):
- [0] domain = 'hiba.com'"
+ [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$(cat $dest/users/user1-cert.pub)")
 EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
@@ -244,7 +244,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-chk: certificate: expired grant"
-RUN ../hiba-gen -f "$dest/policy/grants/all:1s" domain hiba.com validity 1 &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/all:1s" domain hibassh.dev validity 1 &>> "$log"
 RUN ../hiba-ca.sh -d "$dest" -p -I user1 -H all:1s &>> "$log"
 RUN ../hiba-ca.sh -d "$dest" -s -u -I user1 -H all:1s -- -P secret &>> "$log"
 sleep 2
