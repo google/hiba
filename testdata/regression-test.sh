@@ -24,10 +24,13 @@ SUCCESS
 START_TEST "hiba-ca.sh: create host identities"
 RUN ../hiba-ca.sh -d "$dest" -c -h -I host1 -- -N secret >> "$log"
 RUN ../hiba-ca.sh -d "$dest" -c -h -I host2 -- -N secret >> "$log"
+RUN ../hiba-ca.sh -d "$dest" -c -h -I host3 -- -N secret >> "$log"
 EXPECT_EXISTS "$dest/hosts/host1"
 EXPECT_EXISTS "$dest/hosts/host1.pub"
 EXPECT_EXISTS "$dest/hosts/host2"
 EXPECT_EXISTS "$dest/hosts/host2.pub"
+EXPECT_EXISTS "$dest/hosts/host3"
+EXPECT_EXISTS "$dest/hosts/host3.pub"
 SUCCESS
 #####
 
@@ -232,6 +235,15 @@ GOT=$(RUN ../hiba-chk -i "$dest/hosts/host1-cert.pub" -r root "$dest/users/user1
 GOTCODE=$?
 EXPECT_EQ "user1" "$GOT"
 EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: certificate: deny multiple identities"
+RUN ../hiba-ca.sh -d "$dest" -s -h -I host3 -V +30d -H owner:user1 -H owner:user2 -- -P secret &>> "$log"
+GOT=$(RUN ../hiba-chk -i "$dest/hosts/host3-cert.pub" -r root "$dest/users/user1-cert.pub")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 3 "$GOTCODE"
 SUCCESS
 #####
 
