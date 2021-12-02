@@ -93,7 +93,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 
 			cert = hibacert_new();
 			if ((ret = hibacert_parse(cert, key)) < 0)
-				fatal("decode_file: failed to decode hiba grant extension from cert: %s", hiba_err(ret));
+				fatal("decode_file: failed to decode hiba extension from cert: %s", hiba_err(ret));
 			*outcert = cert;
 		} else {
 			// Maybe a HIBA extension
@@ -105,7 +105,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 
 			ext = hibaext_new();
 			if ((ret = hibaext_decode(ext, buf)) < 0)
-				fatal("decode_file: failed to decode hiba grant extension: %s", hiba_err(ret));
+				fatal("decode_file: failed to decode hiba extension: %s", hiba_err(ret));
 
 			*outext = ext;
 			sshbuf_free(buf);
