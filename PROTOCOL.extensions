@@ -46,9 +46,12 @@ The current version starts at 1, and so does minimum supported version.
 The rest of the data is a list of strings key1, value1, key2, value2, ...
 There must be exactly one value per key.
 
-The extension can be stored directly in the above described serialized binary
-format or optionally base64 encoded for simpler handling by shell tools and
-wrappers.
+The HIBA tools support the identity and grant extensions both in their raw
+serialized form as well as in base64 encoding.
+
+Warning: For attaching multiple grants to a single certificate one MUST use a
+comma separated list of base64 encoded grants (raw serialized extension only
+supports one grant per certificates).
 
 ## Extensions ID
 
