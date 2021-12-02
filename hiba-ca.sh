@@ -115,7 +115,7 @@ sign() {
 		T=""
 	fi
 
-	HIBAOPTS=()
+	HIBAEXTS=()
 	for ext in $HIBA; do
 		if [ ! -f "$dest/policy/$SUB/$ext" ]; then
 			echo "cannot find requested HIBA $EXT $ext"
@@ -125,8 +125,9 @@ sign() {
 			echo "user $ID not eligible for grant $ext"
 			return 1
 		fi
-		HIBAOPTS+=("-O" "extension:$EXT@hibassh.dev=$(cat $dest/policy/$SUB/$ext)")
+		HIBAEXTS+=("$(cat $dest/policy/$SUB/$ext)")
 	done
+	HIBAOPTS=("-O" extension:$EXT@hibassh.dev=$(IFS=,; echo "${HIBAEXTS[*]}"))
 
 	echo "== Signing $TYPE key ID $ID"
 	ssh-keygen -I "$ID" -s "$dest/ca" $T -n "$PRINCIPALS" -V "$VALIDITY" "${HIBAOPTS[@]}" "$@" "$TARGET.pub"
