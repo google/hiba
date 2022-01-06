@@ -6,10 +6,11 @@ ACLOCAL_AMFLAGS = -I m4
 
 ARFLAGS = cr
 
-include_HEADERS = hiba.h extensions.h errors.h checks.h certificates.h
+include_HEADERS = hiba.h extensions.h errors.h checks.h certificates.h revocations.h
 
 lib_LTLIBRARIES = libhiba.la
-libhiba_la_SOURCES = extensions.c errors.c checks.c certificates.c
+libhiba_la_SOURCES = extensions.c errors.c checks.c certificates.c revocations.c
+libhiba_la_CFLAGS =
 libhiba_la_LDFLAGS = $(VERSION_INFO)
 
 sbin_PROGRAMS = hiba-chk hiba-gen
