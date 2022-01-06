@@ -32,7 +32,7 @@ struct hibaenv {
 	u_int64_t now;
 	char hostname[HOST_NAME_MAX];
 	const struct hibaext *identity;
-	const void *grl;
+	const struct hibagrl *grl;
 
 	// Certificate
 	u_int64_t cert_issue_ts;
@@ -132,7 +132,7 @@ hibachk_result(struct hibaext *result) {
 }
 
 int
-hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, const char *role) {
+hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
 	u_int32_t i;
 	u_int32_t version;
@@ -158,13 +158,15 @@ hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, const 
 	if (version < env->min_version)
 		return HIBA_CHECK_BADVERSION;
 
-	// Test GRL.
+	// Test GRL
 	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, env->cert_serial);
-	// TODO
+	if (env->grl != NULL && (ret = hibagrl_check(env->grl, env->cert_serial, idx)) < 0) {
+		return ret;
+	}
 
 	result = hibaext_new();
 
-	// Test all other keys.
+	// Test all other keys
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		char *key;
 		char *value;
@@ -203,22 +205,22 @@ err:
 }
 
 struct hibaenv*
-hibaenv_from_host(const struct hibacert *host, const char *grl) {
+hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl) {
 	int len;
 	int ret;
 	struct hibaext **exts;
 	struct hibaenv *env = calloc(sizeof(struct hibaenv), 1);
 
 	if ((ret = hibacert_hibaexts(host, &exts, &len)) < 0) {
-		debug3("hibaenv_from_host: hibacert_hibaexts returned %d: %s", ret, hiba_err(ret));
+		debug2("hibaenv_from_host: hibacert_hibaexts returned %d: %s", ret, hiba_err(ret));
 		goto err;
 	}
 	if (len != 1) {
-		debug3("hibaenv_from_host: too many HIBA identities: got %d", len);
+		debug2("hibaenv_from_host: too many HIBA identities: got %d", len);
 		goto err;
 	}
 	if ((ret = hibaext_sanity_check(exts[0])) < 0) {
-		debug3("hibaenv_from_host: hibaext_sanity_check returned %d: %s", ret, hiba_err(ret));
+		debug2("hibaenv_from_host: hibaext_sanity_check returned %d: %s", ret, hiba_err(ret));
 		goto err;
 	}
 
@@ -226,12 +228,19 @@ hibaenv_from_host(const struct hibacert *host, const char *grl) {
 	env->now = time(NULL);
 	gethostname(env->hostname, HOST_NAME_MAX);
 	if ((ret = hibaext_versions(exts[0], &env->version, &env->min_version)) < 0) {
-		debug3("hibaenv_from_host: hibaext_versions returned %d: %s", ret, hiba_err(ret));
+		debug2("hibaenv_from_host: hibaext_versions returned %d: %s", ret, hiba_err(ret));
 		goto err;
 	}
 	env->cert_serial = hibacert_cert(host)->serial;
 	env->cert_issue_ts = hibacert_cert(host)->valid_after;
 
+	env->grl = grl;
+	if (grl != NULL) {
+		verbose("hibaenv_from_host: loading GRL v%d", hibagrl_version(env->grl));
+		verbose("  comment: %s", hibagrl_comment(env->grl));
+		verbose("  timestamp: %" PRIu64, hibagrl_timestamp(env->grl));
+		verbose("  entries: %" PRIu64, hibagrl_serials_count(env->grl));
+	}
 
 	verbose("hibaenv_from_host: loading environment");
 	verbose("  now: %" PRIu64, env->now);
