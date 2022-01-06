@@ -2,6 +2,7 @@
 *.a
 hiba-chk
 hiba-gen
+hiba-grl
 aclocal.m4
 autom4te.cache
 compile

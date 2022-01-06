@@ -20,4 +20,16 @@
  */
 void decode_file(char *file, struct hibacert **cert, struct hibaext **ext);
 
+/* Open a GRL.
+ * The file will be mmapped to memory if possible. Resources must be released
+ * using the close_grl() function to properly free / munmap data.
+ *
+ * The input can be provided as a filename or from stdin (using the special
+ * value '-').
+ */
+void open_grl(const char *file, unsigned char **ptr, u_int64_t *sz, int *mmapped);
+
+/* Release resources allocated by open_grl. */
+void close_grl(unsigned char *ptr, u_int64_t sz, int mmapped);
+
 #endif  // _UTIL_H
