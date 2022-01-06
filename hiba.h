@@ -16,6 +16,7 @@ extern "C" {
 #include "checks.h"
 #include "errors.h"
 #include "extensions.h"
+#include "revocations.h"
 
 #ifdef __cplusplus
 }

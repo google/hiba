@@ -115,4 +115,4 @@ int hibaext_add_pair(struct hibaext *ext, const char *key, const char *value);
 int hibaext_update_pair(struct hibaext *ext, const char *key,
                         const char *value);
 
-#endif /* _EXTENSIONS_H */
+#endif // _EXTENSIONS_H

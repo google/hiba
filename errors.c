@@ -21,6 +21,8 @@ const char *hiba_err(int err) {
 		return "incompatible hiba version";
 	case HIBA_BAD_PARAMS:
 		return "invalid input parameter";
+	case HIBA_INVALID_GRL:
+		return "invalid GRL data";
 	case HIBA_EXT_TOOBIG:
 		return "unexpected extra data in hiba extension";
 	case HIBA_EXT_NOKEY:

@@ -20,6 +20,7 @@
 #define HIBA_EXT_NOKEY -5
 #define HIBA_UNKNOWN_EXT -6
 #define HIBA_INTERNAL_ERROR -7
+#define HIBA_INVALID_GRL -8
 
 // Extensions sanity checks diagnostics
 #define HIBA_EXT_NODOMAIN -20

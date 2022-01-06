@@ -5,22 +5,59 @@
 This file allows to selectively revoke one or several grants from a
 certificate without revoking all the grants or the certificate itself.
 
+Note: Consider using an OpenSSH KRL if you want to revoke entire certificates
+instead of individual grants - it is more efficient.
+
 ## Format
 
-The format of this file follows the openssh KRL format for certificates
-(KRL_SECTION_CERTIFICATES) by serial + bitmap (KRL_SECTION_CERT_SERIAL_BITMAP).
+The hiba-chk is a short lived helper invoked by OpenSSH and will need to parse
+the GRL file for every invocation. Therefore, the format has been optimized for
+fast SSH certificate serial lookups.
 
-In this case, while the format is consistent with openssh KRL file, the
-semantic is slightly different. The GRL serial points to a given certificate,
-while the bitmap is used to target the grants inside this certificate.
+The GRL starts with a header followed by two sections: serials list and grant
+revocation maps. Each section starts with a uint64 that store the section size.
 
 ```
-	uint64  serial_offset
-	mpint   revoked_grants_bitmap
+	uint32 magic
+	uint32 version
+	uint32 min_version
+	uint64 timestamp
+	string comment
 ```
 
-This file is read by the hiba-helper only and must be pushed by the host owner
-similarly to the openssh KRL.
+Where magic is defined as:
+
+```
+#define HIBA_GRL_MAGIC	0x4847524c
+```
+
+The subsequent section contains a sorted list of certificate serial numbers
+associated with an index. Each entry has a fixed size in order to allow quick
+lookups. The index is used to find the corresponding bitmap of revoked grants
+in the next section.
+
+```
+	uint64 serial
+	uint64 offset
+```
+
+The last section contains a list of bitmaps. The offset of each bit in the map
+represents the position of a grant in the certificate. This means that the
+order of grants in a certificate matters.
+
+Each bitmap is represented by:
+
+```
+	uint16 size
+	char[] bitmap
+```
+
+Finally, the file also contains a trailer magic (same value as header magic).
+
+## Usage
+
+This file is read by hiba-chk and must be pushed by the host owner similarly to
+the openssh KRL.
 
 Note: It is the CA owner's responsibility to assess the trade off between the
 need to push a GRL file periodically and the maximum allowed validity of HIBA
