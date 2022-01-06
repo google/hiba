@@ -1,0 +1,122 @@
+.\" Copyright 2021 The HIBA Authors
+.\"
+.\" Use of this source code is governed by a BSD-style
+.\" license that can be found in the LICENSE file or at
+.\" https://developers.google.com/open-source/licenses/bsd
+.TH HIBA-GRL 1 "Jan, 1 2022"
+.SH NAME
+hiba-grl - Generate, test and displays HIBA Grant Revocation lists (GRL).
+.SH SYNOSPSIS
+.SS Generate GRL file
+.B hiba-grl
+.RI "[-v] -f " "file" " -r -s " "serial" " " "ID1" ...
+.br
+.SS Test GRL file
+.B hiba-grl
+.RI "[-v] -f " "file" " -t -s " "serial" " " "ID1" ...
+.br
+.SS Diplay GRL file
+.B hiba-grl
+.RI "[-v] -f " "file" " -d [-s " "serial" "] "
+.br
+.SH DESCRIPTION
+.B hiba-grl
+is used to generate HIBA Grant Revocation Lists (GRL) that can be distributed to hosts to selectively revoke HIBA grants without revoking the whole SSH certificate. The grants to revoke are given by a certificate
+.RI "" "serial" " and a list of grant" "IDs" " appended to the command line (see " "EXAMPLE" ")."
+.PP
+.B hiba-grl
+can be used to test a given certificate serial and list of IDs against the content of a GRL file for revocation.
+.RI "The human readable content is printed on " "STDOUT" "."
+.PP
+.B hiba-grl
+can also be used to display the content of part or all of the GRL file. The output shows the header, followed by a list of certificate serials along with a hexadecimal representation of the bitmap of revoked grants. The bitmap has a variable size (1 byte blocks). Each grant is repesented by 1 bit (1=Revoked, 0=Valid), shifted N times with N being the grant ID (starting from 0). The resulting hexadecimal representation shows four bits (grant indexes) per hexadecimal digit.
+.PP
+Example: bitmap hexadecimal representation (4 bits blocks, LSB first) of N grant indexes:
+.IP \(bu [1]
+first hexadecimal digit [0, 1, 2, 3]
+.IP \(bu [1]
+second hexadecimal digit [4, 5, 6, 7]
+.IP \(bu [1]
+following hexadcimal digits [...]
+.IP \(bu [1]
+last hexadecimal digit [N-4, N-3, Y-2, N-1]
+.PP
+.RI "The human readable content is printed on " "STDOUT" "."
+.PP
+.B hiba-grl
+output is meant for human consumption and must not be used for permission verification.
+.RI "Instead, use " "hiba-chk(1)" " for computing authorizations."
+
+.SH OPTIONS
+This program only accepts short options (single dash).
+.TP
+.B \-v
+Turn on verbose mode. This flag can be repeated up to 3 times for increased verbosity.
+.TP
+.B \-r
+Generate/Update a GRL file and revoke the grants passed in parameters.
+.TP
+.B \-t
+Test the revocation status of a list of grant IDs against a GRL file.
+.TP
+.B \-d
+.RI "Display the content of a GRL file, filtering for a given " "serial" " when used along with " "-s" "."
+.TP
+.B \-f
+Location of the GRL file. When revoking grants, the file will be modified in place. If the file doesn't exist and a revocation is requested, with
+.I -r
+, the file will be created.
+.TP
+.B \-c
+Comment to store in the GRL header. This only affects new GRL files and will not update the comment of existing GRL files.
+.TP
+.B \-s
+The certificate serial number to revoke, to test against, or to use for filtering when displaying the GRL file content.
+.SH NOTES
+The GRL file identifies HIBA grants by
+.I ID
+inside a given certificate. This means that the order of the grants in the certificate matters for revocation. It is safe to do so, as once signed, a certificate cannot be mutated. This adds the constraint that a Certificate Authority
+.B MUST
+keep a mapping of all the grants added to certificates and their order. See
+.I PROTOCOL.grl
+for more information on the format of the Grant Revocation List file.
+.SH EXAMPLE
+.RS 4
+.nf
+# Revoke 3 grants from certificate serial 0x1234:
+$ hiba-grl -r -f hiba.grl -s 0x1234 0 1 2
+
+# Revoke 1 grant from certificate serial 0x5678:
+$ hiba-grl -r -f hiba.grl -s 0x5678 5
+
+# Display all revocations:
+$ hiba-grl -d -f hiba.grl
+HIBA GRL (v1):
+  comment: Generated using hiba-grl
+  timestamp: 1641460992
+  entries: 2
+  [0x0000000000001234]: 70
+  [0x0000000000005678]: 02
+
+# Display revocations for certificate serial 0x1234 only:
+$ hiba-grl -d -f hiba.grl -s 0x1234
+HIBA GRL (v1):
+  comment: Generated using hiba-grl
+  timestamp: 1641460890
+  entries: 1
+  [0x0000000000001234]: 70
+
+# Test revocation of 2 grants from certificate serial 0x1234:
+$ hiba-grl -t -f hiba.grl -s 0x1234 0 5
+[0x0000000000001234]: 0 Revoked
+[0x0000000000001234]: 5 Valid
+
+# Test revocation of 2 grants from certificate serial 0x5678:
+$ hiba-grl -t -f hiba.grl -s 0x5678 0 5
+[0x0000000000001234]: 0 Valid
+[0x0000000000001234]: 5 Revoked
+.fi
+.SH SEE ALSO
+.BR hiba-ca.sh (1),
+.BR hiba-chk (1)
+.BR hiba-gen (1)

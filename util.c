@@ -5,10 +5,14 @@
  * license that can be found in the LICENSE file or at
  * https://developers.google.com/open-source/licenses/bsd
  */
+#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "hiba.h"
@@ -16,6 +20,7 @@
 #include "openbsd-compat/bsd-misc.h"
 #include "ssherr.h"
 #include "sshkey.h"
+#include "xmalloc.h"
 
 /* OpenSSH's sshkey_sign function depends on a sshsk_sign function provided by
  * the caller. HIBA doesn't use this symbols but it ends up implicitly imported
@@ -120,4 +125,52 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 	if (f)
 		fclose(f);
 	free(line);
+}
+
+#define CHUNK_SZ 1024
+
+void
+open_grl(const char *file, unsigned char **ptr, u_int64_t *sz, int *mmapped) {
+	int f;
+	struct stat st;
+
+	if (!file || !sz || !ptr || !mmapped)
+		return;
+
+	*sz = 0;
+	*ptr = NULL;
+	*mmapped = 0;
+
+	if (strcmp(file, "-") != 0 && stat(file, &st) == -1) {
+		debug3("open_grl: %s: %s", file, strerror(errno));
+		return;
+	} else if (strcmp(file, "-") == 0) {
+		while (1) {
+			*ptr = xreallocarray(*ptr, *sz + CHUNK_SZ, sizeof(char));
+			*sz += fread(*ptr + *sz, 1, CHUNK_SZ, stdin);
+			if (ferror(stdin)) {
+				fatal("open_grl: read stdin: %s", strerror(errno));
+			} else if (feof(stdin) != 0) {
+				return;
+			}
+		}
+	} else if ((f = open(file, O_RDONLY)) < 0) {
+		fatal("open_grl: open %s: %s", file, strerror(errno));
+	}
+
+	*ptr = mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, f, 0);
+	*mmapped = 1;
+	*sz = st.st_size;
+
+	close(f);
+	return;
+}
+
+void
+close_grl(unsigned char *ptr, u_int64_t sz, int mmapped) {
+	if (mmapped) {
+		munmap(ptr, sz);
+	} else {
+		free(ptr);
+	}
 }
