@@ -285,3 +285,114 @@ EXPECT_EQ "" "$GOT"
 EXPECT_EQ 47 "$GOTCODE"
 SUCCESS
 #####
+
+START_TEST "hiba-grl: revoke: create file"
+RUN ../hiba-grl -f "$dest/grl" -r -s 42 1 &>> "$log"
+GOTCODE=$?
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: update new serial"
+RUN ../hiba-grl -f "$dest/grl" -r -s 0x1234 2 3 &>> "$log"
+GOTCODE=$?
+EXPECT_EQ 0 "$GOTCODE"
+GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl" -d | grep timestamp | awk '{print $2}')
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: dump file"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d)
+GOTCODE=$?
+EXPECTED="HIBA GRL (v1):
+  comment: Generated using hiba-grl
+  timestamp: $GRL_TIMESTAMP
+  entries: 2
+  [0x000000000000002a]: 20
+  [0x0000000000001234]: C0"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: filter by serial"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d -s 0x1234)
+GOTCODE=$?
+EXPECTED="HIBA GRL (v1):
+  comment: Generated using hiba-grl
+  timestamp: $GRL_TIMESTAMP
+  entries: 2
+  [0x0000000000001234]: C0"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: test valid"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 0)
+GOTCODE=$?
+EXPECTED="[0000000000001234]: 0 Valid"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: test revoked"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 2)
+GOTCODE=$?
+EXPECTED="[0000000000001234]: 2 Revoked"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 255 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: test multiple"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 0 1 2 3)
+GOTCODE=$?
+EXPECTED="[0000000000001234]: 0 Valid
+[0000000000001234]: 1 Valid
+[0000000000001234]: 2 Revoked
+[0000000000001234]: 3 Revoked"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 254 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: non revoked grant"
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl" -r root -p user1 "$dest/policy/grants/all")
+GOTCODE=$?
+EXPECT_EQ "user1" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: update existing serial"
+RUN ../hiba-grl -f "$dest/grl" -r -s 42 0 &>> "$log"
+GOTCODE=$?
+EXPECT_EQ 0 "$GOTCODE"
+GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl" -d | grep timestamp | awk '{print $2}')
+SUCCESS
+#####
+
+START_TEST "hiba-grl: revoke: dump file"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d)
+GOTCODE=$?
+EXPECTED="HIBA GRL (v1):
+  comment: Generated using hiba-grl
+  timestamp: $GRL_TIMESTAMP
+  entries: 2
+  [0x000000000000002a]: 30
+  [0x0000000000001234]: C0"
+EXPECT_EQ "$EXPECTED" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: revoked grant"
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl" -r root -p user1 "$dest/policy/grants/all")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 43 "$GOTCODE"
+SUCCESS
+#####
+
