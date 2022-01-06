@@ -43,7 +43,7 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 	debug2("Testing %d grants", len);
 	for (i = 0; i < len; ++i) {
 		verbose("check_access: checking grant %d.", i);
-		if ((ret = hibachk_authorize(env, grants[i], role)) == HIBA_OK) {
+		if ((ret = hibachk_authorize(env, grants[i], i, role)) == HIBA_OK) {
 			verdict = 0;
 			hibachk_authorized_users(env, cert, i, stdout);
 		} else {
@@ -65,6 +65,9 @@ main(int argc, char **argv) {
 	int ret;
 	int debug_flag = 0;
 	int log_level = SYSLOG_LEVEL_INFO;
+	int grl_mmapped = 0;
+	u_int64_t grl_size = 0;
+	unsigned char *grl_data = NULL;
 	char *grl_file = NULL;
 	char *principal = NULL;
 	char *identity_file = NULL;
@@ -131,9 +134,12 @@ main(int argc, char **argv) {
 	
 	decode_file(identity_file, &host, &identity);
 	decode_file(argv[0], &user, &grant);
+	open_grl(grl_file, &grl_data, &grl_size, &grl_mmapped);
 
 	{
+		struct sshbuf *grl_blob = NULL;
 		struct hibaenv *env;
+		struct hibagrl *grl = NULL;
 
 		if (host == NULL) {
 			host = hibacert_new();
@@ -148,11 +154,27 @@ main(int argc, char **argv) {
 			grant = NULL;
 		}
 
-		env = hibaenv_from_host(host, grl_file);
+		if (grl_file != NULL) {
+			// If a GRL file was specified but the content is not found, we fail closed.
+			if (grl_data == NULL) {
+				fatal("%s:  cannot read GRL file %s", __progname, grl_file);
+			}
+
+			grl = hibagrl_new();
+			grl_blob = sshbuf_from(grl_data, grl_size);
+			if ((ret = hibagrl_decode(grl, grl_blob)) < 0) {
+				fatal("%s:  cannot decode GRL file %s: %s", __progname, grl_file, hiba_err(ret));
+			}
+		}
+
+		env = hibaenv_from_host(host, grl);
 		ret = check_access(env, user, role);
 		hibaenv_free(env);
+		hibagrl_free(grl);
+		sshbuf_free(grl_blob);
 	}
 
+	close_grl(grl_data, grl_size, grl_mmapped);
 	hibacert_free(host);
 	hibacert_free(user);
 	hibaext_free(identity);
