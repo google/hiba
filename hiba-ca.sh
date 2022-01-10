@@ -18,6 +18,9 @@
 # * root/
 #   * CA public key (to be distributed globally)
 #   * CA private key (secret)
+#   * logs of signed certificates
+#   * krl: certificate revocation list
+#   * grl: grant revocation list
 #   * hosts/
 #     * <hostname> public key (to be kept by CA)
 #     * <hostname> private key (to be distributed to the host and removed from CA)
@@ -35,6 +38,12 @@
 #       * <principalname>/
 #         * symlinks to a grant from grants/ that this principal is allowed to
 #           request
+#
+# The structure of the logs is the following (comma separated):
+# * timestamp
+# * serial
+# * principals
+# * ordered list of grants
 
 usage() {
 	if [ "$1" != "" ]; then
@@ -60,18 +69,28 @@ usage() {
 	echo "  Sign an identity"
 	echo "    $0 -s -u -I name -n principal -H <hiba extensions> -V <validity> -d <root CA path> -- <ssh-keygen extra args>"
 	echo "    $0 -s -h -I name -n principal -H <hiba extension>  -V <validity> -d <root CA path> -- <ssh-keygen extra args>"
-	echo "  Show the CA content (no secrets are displayed): all, users, hosts, HIBA policy"
+	echo "  Show the CA content (no secrets are displayed): all, users, hosts, HIBA policy, revocations"
 	echo "    $0 -l -d <root CA path>"
 	echo "    $0 -l -u -d <root CA path>"
 	echo "    $0 -l -h -d <root CA path>"
 	echo "    $0 -l -p -d <root CA path>"
+	echo "    $0 -l -k -d <root CA path>"
+	echo "  List or clean up old signing request logs (keep the last N days):"
+	echo "    $0 -k -N <ndays> -d <root CA path>"
+	echo "    $0 -k -c -N <ndays> -d <root CA path>"
+	echo "  Revoke certificates:"
+	echo "    $0 -k -r -z <revocation spec> -d <root CA path>"
+	echo "  Revoke grants:"
+	echo "    $0 -k -r -H grant -d <root CA path>"
 	echo ""
 	echo "Note:"
 	echo "* -H can be repeated to include more than one grant in user certificates"
 	echo "* -n can be repeated to include more than one principal"
+	echo "* -z uses the KEY REVOCATION LISTS format (see man ssh-keygen)"
 	echo ""
 	echo "Defaults:"
 	echo "* <root CA path>: default to ~/.hiba-ca/"
+	echo "* <ndays>: default to 90"
 	echo "* <validity>:     default to 1h. The format is similar to"
 	echo "                  ssh-keygen's \`-v validity_interval\`"
 	echo "                  (see man ssh-keygen)."
@@ -83,6 +102,78 @@ usage() {
 error() {
 	echo "== ERROR =="
 	exit 1
+}
+
+get_next_serial() {
+	if [ ! -f $dest/logs ]; then
+		echo 1
+		return
+	fi
+	serial=$(tail -n 1 $dest/logs | cut -f2 -d,)
+	echo $((serial+1))
+}
+
+get_logs() {
+	DAYS=$1
+	FIELDS=$2
+
+	PGM='{if ($1 >= cutoff) {print '$FIELDS'}}'
+	now=$(date +%s)
+	cutoff=$((now - 86400 * DAYS))
+	awk -F, -v cutoff=$cutoff "$PGM" <"$dest/logs"
+}
+
+cleanup_logs() {
+	DAYS=$1
+
+	rm -f "$dest/.logs.new"
+
+	get_logs "$DAYS" '$0' > "$dest/.logs.new"
+	old=$(wc -l "$dest/logs" | cut -f1 -d" ")
+	new=$(wc -l "$dest/.logs.new" | cut -f1 -d" ")
+	COUNT=$((old - new))
+	if [ "$COUNT" -gt 0 ]; then
+		echo "== Do you want to remove $COUNT entries before $(date --date=@$cutoff)? (y|N)"
+		read ans
+		if [ "$ans" = "y" ]; then
+			mv "$dest/.logs.new" "$dest/logs"
+			echo "== Confirmed =="
+		else
+			rm "$dest/.logs.new"
+			echo "== Aborted =="
+		fi
+	else
+		echo "== Nothing to do"
+	fi
+}
+
+revoke_grants() {
+	NAME="$1"
+	GRANT="$2"
+
+	SERIALS=$(awk -F, -v NAME=$NAME -v GRANT=$GRANT '{ if(($3 ~ NAME) && ($4 ~ GRANT)) {print $2}}' <"$dest/logs")
+	COUNT=$(echo $SERIALS | wc -w)
+	echo "== This action will revoke grants in $COUNT certificate(s)."
+	if [ "$COUNT" -gt 0 ]; then
+		echo "Do you want to continue? (y|N)"
+		read ans
+		if [ "$ans" != "y" ]; then
+			return -1
+		fi
+	fi
+	for s in $SERIALS; do
+		GRANTS_BY_SERIAL=$(awk -F, -v serial=$s '{ if ($2 == serial) { print $4 }}' <"$dest/logs")
+		IDS=$(echo $GRANTS_BY_SERIAL | xargs -n 1 | grep -n $GRANT | cut -f1 -d:| awk '{print $1 -1}')
+                hiba-grl -f "$dest/grl" -c "$dest $(ssh-keygen -lf $dest/ca.pub)" -r -s "$s" $IDS
+	done
+}
+
+revoke_cert() {
+	MODE="$1"
+	SERIAL="$2"
+
+	echo "== Revoking certification serial $SERIAL"
+	ssh-keygen -k -f "$dest/krl" -s "$dest/ca.pub" $MODE -z "$(date +%s)" "$SERIAL"
 }
 
 create_key() {
@@ -129,8 +220,11 @@ sign() {
 	done
 	HIBAOPTS=("-O" extension:$EXT@hibassh.dev=$(IFS=,; echo "${HIBAEXTS[*]}"))
 
+	serial=$(get_next_serial)
 	echo "== Signing $TYPE key ID $ID"
-	ssh-keygen -I "$ID" -s "$dest/ca" $T -n "$PRINCIPALS" -V "$VALIDITY" "${HIBAOPTS[@]}" "$@" "$TARGET.pub"
+	if ssh-keygen -I "$ID" -s "$dest/ca" $T -z "$serial" -n "$PRINCIPALS" -V "$VALIDITY" "${HIBAOPTS[@]}" "$@" "$TARGET.pub"; then
+		echo "$(date +%s),$serial,$PRINCIPAL,$HIBA" >> $dest/logs
+	fi
 }
 
 #
@@ -148,14 +242,20 @@ sign=
 import=
 remove=
 list=
+manage=
+cleanup=
+revoke=
 policy=
 policy_remove=
 list_policy=
+list_revocations=
 user=
+serial=
 validity="+1h"
 verbose=0
+days=90
 
-while getopts "cilprsuhvf:I:n:d:H:V:" opt; do
+while getopts "cilprskuhvf:I:n:N:d:H:V:z:" opt; do
 	case $opt in
 		c) create=1;;
 		i) import=1;;
@@ -163,11 +263,14 @@ while getopts "cilprsuhvf:I:n:d:H:V:" opt; do
 		p) policy=1;;
 		r) remove=1;;
 		s) sign=1;;
+		k) manage=1;;
 		u) user=1;;
 		h) host=1;;
 		f) file="$OPTARG";;
 		I) name="$OPTARG";;
+		z) serial="$OPTARG";;
 		n) principal="$principal $OPTARG";;
+		N) days="$OPTARG";;
 		d) dest="$OPTARG";;
 		H) hiba="$hiba $OPTARG";;
 		V) validity="$OPTARG";;
@@ -180,27 +283,42 @@ principal=$(echo "$name $principal" | xargs)
 hiba=$(echo "$hiba" | xargs)
 shift $((OPTIND - 1))
 
-# Remove (-r) is a modifier of policy subcommand:
+# Remove (-r) is a modifier of policy and manage subcommand:
 if [ "${policy}${remove}" = "11" ]; then
 	remove=
 	policy=
 	policy_remove=1
 fi
-
-# Policy (-p) is a modifier of list subcommand:
-if [ "${policy}${list}" = "11" ]; then
+if [ "${manage}${remove}" = "11" ]; then
 	remove=
+	manage=
+	revoke=1
+fi
+
+# Cleanup (-c) is a modifier of manage subcommand:
+if [ "${manage}${create}" = "11" ]; then
+	create=
+	manage=
+	cleanup=1
+fi
+
+# Policy (-p) and Manage (-k) are modifiers of list subcommand:
+if [ "${policy}${list}" = "11" ]; then
 	policy=
 	list_policy=1
 fi
+if [ "${manage}${list}" = "11" ]; then
+	manage=
+	list_revocations=1
+fi
 
 # Sanity check command line
-action="${create}${sign}${import}${remove}${list}${policy}${policy_remove}"
+action="${create}${sign}${import}${remove}${list}${policy}${manage}${policy_remove}${cleanup}${revoke}"
 if [ -z "$action" ]; then
-	usage "at least one action out of [-s | -c | -i | -a | -r | -l] required."
+	usage "at least one action out of [-s | -c | -i | -a | -r | -l | -k] required."
 fi
 if [ "$action" != "1" ]; then
-	usage "only one action out of [-s | -c | -i | -a | -r | -l] required."
+	usage "only one action out of [-s | -c | -i | -a | -r | -l | -k] required."
 fi
 if [ -z "$user" ] && [ -z "$host" ]; then
 	ca=1
@@ -222,11 +340,12 @@ fi
 
 # Check list required command line parameters
 if [ "$list" = 1 ]; then
-	# If none of -u -h -p is given, display them all
-	if [ -z "${user}${host}${list_policy}" ]; then
+	# If none of -u -h -p -k is given, display them all
+	if [ -z "${user}${host}${list_policy}${list_revocations}" ]; then
 		user=1
 		host=1
 		list_policy=1
+		list_revocations=1
 	fi
 fi
 
@@ -316,6 +435,32 @@ if [ "$sign" = 1 ]; then
 	fi
 fi
 
+# Check revoke required command line parameters
+if [ "$revoke" = 1 ]; then
+	# the certificate serial is required.
+	if [ -z "$serial" -a -z "$hiba" ]; then
+		usage "missing -z <revocation spec> or -H grant for revocation."
+	elif [ -n "$serial" -a -n "$hiba" ]; then
+		usage "only one of -z <serial> or -H grant allowed at once for revocation."
+	fi
+fi
+
+# Check log required command line parameters
+if [ "$manage" = 1 ]; then
+	# the cut off must by a number of days.
+	if [ "$days" -eq 0 ]; then
+		usage "-N must be a integer representing the number of days to display."
+	fi
+fi
+
+# Check cleanup required command line parameters
+if [ "$cleanup" = 1 ]; then
+	# the cut off must by a number of days.
+	if [ "$days" -eq 0 ]; then
+		usage "-N must be a integer representing the number of days to keep."
+	fi
+fi
+
 if [ "$verbose" = 1 ]; then
   set -x
 fi
@@ -334,18 +479,18 @@ if [ "$list" = 1 ]; then
 	echo ""
 	if [ -n "$user" ]; then
 		echo "== Users =="
-		for u in $dest/users/*.pub; do
+		for u in $(find "$dest/users/" -name '*.pub'); do
 			userpub=$(basename $u)
 			user=${userpub%.pub}
 			[[ "$user" = *-cert ]] && continue
-			eligible=$(ls "$dest/policy/principals/$user")
+			eligible=$(ls "$dest/policy/principals/$user" | xargs)
 			echo "* $user: eligible for [$eligible]"
 		done
 		echo ""
 	fi
 	if [ -n "$host" ]; then
 		echo "== Hosts =="
-		for h in $dest/hosts/*.pub; do
+		for h in $(find $dest/hosts/ -name '*.pub'); do
 			hostpub=$(basename $h)
 			host=${userpub%.pub}
 			[[ "$host" = *-cert ]] && continue
@@ -365,9 +510,18 @@ if [ "$list" = 1 ]; then
 		done
 		echo ""
 	fi
+	if [ -n "$list_revocations" ]; then
+		echo "== KRL =="
+		ssh-keygen -Q -f "$dest/krl" -l | tr "#" "*" | sed '/^$/d'
+		echo ""
+		echo "== GRL =="
+                hiba-grl -f "$dest/grl" -d -c "$dest $(ssh-keygen -lf $dest/ca.pub)"
+	fi
 elif [ "$create" = 1 ]; then
 	if [ "$ca" = 1 ]; then
-		create_key "CA" "$dest/ca" "$@" || error
+		rm  -f  "$dest/logs"
+		create_key "CA" "$dest/ca" -C "$dest CA" "$@" || error
+		echo "" | revoke_cert "" "-" &> /dev/null
 		echo "== Done =="
 	elif [ "$host" = 1 ]; then
 		create_key "host" "$dest/hosts/$name" "$@" || error
@@ -394,12 +548,14 @@ elif [ "$import" = 1 ]; then
 	fi
 elif [ "$remove" = 1 ]; then
 	if [ "$host" = 1 ]; then
+		echo "key: $(cat $dest/hosts/$name.pub)" | revoke_cert "-u" "-"
 		rm -f "$dest/hosts/$name"
 		rm -f "$dest/hosts/$name.pub"
 		rm -f "$dest/hosts/$name-cert.pub"
 		echo "== Done =="
 		echo "Identity removed: $name"
 	elif [ "$user" = 1 ]; then
+		echo "key: $(cat $dest/users/$name.pub)" | revoke_cert "-u" "-"
 		rm -f "$dest/users/$name"
 		rm -f "$dest/users/$name.pub"
 		rm -f "$dest/users/$name-cert.pub"
@@ -415,6 +571,7 @@ elif [ "$policy" = 1 ]; then
 	echo "User $name is now eligible for [$hiba]"
 elif [ "$policy_remove" = 1 ]; then
 	for grant in $hiba; do
+		revoke_grants "$name" "$grant" || error
 		rm "$dest/policy/principals/$name/$grant"
 	done
 	echo "== Done =="
@@ -429,4 +586,22 @@ elif [ "$sign" = 1 ]; then
 		echo "== Done =="
 		echo "Certificate created: $dest/users/$name-cert.pub"
 	fi
+elif [ "$revoke" = 1 ]; then
+	if [ -n "$serial" ]; then
+		revoke_cert "-u" "$serial" || error
+	else
+		for h in $hiba; do
+			revoke_grants ".*" "$h" || error
+		done
+	fi
+	echo "== Done =="
+elif [ "$manage" = 1 ]; then
+	echo "Signed certificates log for the last $days days:"
+	get_logs "$days" '$1 " " $2' | while read d s; do
+		echo "  [$(date --date=@$d)]: serial $s"
+	done
+	echo "== Done =="
+elif [ "$cleanup" = 1 ]; then
+	cleanup_logs "$days"
+	echo "== Done =="
 fi

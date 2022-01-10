@@ -36,13 +36,25 @@ hiba-ca - Basic command line Certificate Authority with HIBA support.
 .RI "-p -r [-d " "capath" "] -I " "username" " -H " "grant_name"
 .SS List CA content (doesn't show any secrets)
 .B hiba-ca.sh
-.RI "-l [-d " "capath" "] [-u] [-h] [-p]"
+.RI "-l [-d " "capath" "] [-u] [-h] [-p] [-k]"
 .SS Sign a user/host certificate
 .B hiba-ca.sh
 .RI "-s [-d " "capath" "] [-n " "principal" "] [-V " "validity" "] [-H " "HIBA" "] -u -I " "username" " -- " "additional ssh-keygen options"
 .br
 .B hiba-ca.sh
 .RI "-s [-d " "capath" "] [-n " "principal" "] [-V " "validity" "] [-H " "HIBA" "] -h -I " "hostname" " -- " "additional ssh-keygen options"
+.SS List CA certificate signing log
+.B hiba-ca.sh
+.RI "-k [-d " "capath" "] [-N " "days" "]"
+.SS Clean up old CA certificate signing log
+.B hiba-ca.sh
+.RI "-k [-d " "capath" "] -c [-N " "days" "]"
+.SS Revoke certificate
+.B hiba-ca.sh
+.RI "-k [-d " "capath" "] -r -z " "revocation_spec"
+.SS Revoke HIBA grant
+.B hiba-ca.sh
+.RI "-k [-d " "capath" "] -r -H " "grant_name"
 .SH DESCRIPTION
 .B hiba-ca.sh
 implements a basic Certificate Authority managed by the command line that supports several operations:
@@ -53,8 +65,11 @@ Create a CA key pair.
 Create, import or remove a user/host key pair.
 .IP \n+[step]
 Add or Remove permissions for a user to request HIBA grants.
+Note, removing permissions will also revoke all grants that are attached to corresponding known certificates.
 .IP \n+[step]
 Sign a user/host public key into a certificate, optionally attaching HIBA grants.
+.IP \n+[step]
+Revoke a user/host certificate or HIBA grant attached to a user certificate.
 .PP
 The Certificate Authority stores all the keys on disk, following a predefined structure.
 This predefined structure allows to reference SSH identities as well as HIBA extensions directly by name.
@@ -87,11 +102,19 @@ The policy permissions are managed via symlinks in the following folder:
 .IR "capath" "/policy/grants/" "grant_name2"
 .IP \[bu]
 .RI ...
+.PP
+A few special files are also stored at the root of the CA path:
+.IP \[bu] 2
+.IR "capath" "/logs"
+.IP \[bu]
+.IR "capath" "/krl"
+.IP \[bu]
+.IR "capath" "/grl"
 .SH OPTIONS
 This program only accepts short options.
 .TP
 .B \-c
-Create new identities (CA, user or host).
+Create new identities (CA, user or host). When used with -k, clean up old logs.
 .TP
 .B \-l
 Show the content of the certificate authority (not showing any secrets).
@@ -101,12 +124,16 @@ Import new identities (user or host).
 .TP
 .B \-r
 Remove existing identities (user or host). When used with -p, remove HIBA policy permission.
+When used with -k, revoke grants/certificates.
 .TP
 .B \-p
 .RI "Add HIBA policy permission on a " "grant" " for a " "user" ". When used with -r, remove said permission.
 .TP
 .B \-s
 Sign certificates (user or host).
+.TP
+.B \-k
+Display signing logs. When used with -c, clean up old logs. When used with -r, revoke certificates or grants.
 .TP
 .B \-d
 .IR "capath" " of the CA (will be initialized on the first call if it doesn't exist yet). Default to ~/.hiba-ca."
@@ -127,10 +154,10 @@ Sign certificates (user or host).
 .IR "validity" " to set to the certificate. Default to '+1h'. See " "ssh-keygen(1)" " for the expected syntax."
 .TP
 .B \-z
-.IR "serial" " to set to the certificate. THis is useful when planning to work with " "KRL" " and/or " "GRL" ". Default '0'."
+.IR "serial" " pointing to a file containing certificate revocation specs or " "-" " for stdin. See " "ssh-keygen(1)" " for the expected syntax."
 .TP
 .B \-H
-.RI "Name of the " "HIBA" " extensions to be attached to the certificate at signing time. This flag can be repeated for adding more than one " "HIBA" " extension. When used with -p this lists extensions to be added/removed."
+.RI "Name of the " "HIBA" " extensions to be attached to the certificate at signing time. This flag can be repeated for adding more than one " "HIBA" " extension. When used with -p this lists extensions to be added/removed. When used with -k, this lists grants to be revoked."
 .SH NOTES
 .RI "When the " "hiba-ca.sh" " generates the users & hosts private keys, it is for convenience only. It is not required to leave the private keys in the " "capath" ".
 .SH EXAMPLE
@@ -193,6 +220,43 @@ $ hiba-ca.sh -s -d /tmp/myca -u -I user1 -H o:user1
 user user1 not eligible for grant o:user1
 == ERROR ==
 .fi
+.SS Revocations
+.RS 4
+.nf
+$ hiba-ca.sh -k -d /tmp/myca
+Signed certificates log for the last 90 days:
+  [Thu Jan  6 06:20:15 PM CET 2022]: serial 1
+  [Thu Jan  6 06:20:17 PM CET 2022]: serial 2
+  [Thu Jan  6 06:20:18 PM CET 2022]: serial 3
+  [Thu Jan  6 06:20:53 PM CET 2022]: serial 4
+  [Fri Jan  7 01:39:24 PM CET 2022]: serial 5
+  [Fri Jan  7 01:43:06 PM CET 2022]: serial 6
+
+$ echo "serial: 5" | hiba-ca.sh -k -r -z -
+
+$ hiba-ca.sh -p -d /tmp/myca -r -I user -H grant_to_revoke
+== This action will revoke grants in 1 certificate(s).
+Do you want to continue? (y|N)
+y
+== Done ==
+
+$ hiba-ca.sh -l -d /tmp/myca -k
+== Certificate Authority location ==
+/tmp/myca
+
+== KRL ==
+* KRL version 1641575432
+* Generated at 20220107T110152
+hash: SHA256:SHA256:I0i7+kR3A8oDebXEQn78sH9H7o3ocblcvD7xc0oay+8 * ssh-rsa
+* CA key ssh-rsa SHA256:TBOrQxMpZqV9zok9QxanxQuRsJX4aAEy6ALPeCudvDc
+serial: 5
+
+== GRL ==
+HIBA GRL (v1):
+  comment: /tmp/myca 3072 SHA256:TBOrQxMpZqV9zok9QxanxQuRsJX4aAEy6ALPeCudvDc tlelong@tlelong (RSA)
+  timestamp: 1641575543
+  entries: 1
+  [0x0000000000000003]: 20
 .SH SEE ALSO
 .BR hiba-chk (1),
 .BR hiba-gen (1),

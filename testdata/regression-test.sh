@@ -18,6 +18,7 @@ EXPECT_EXISTS "$dest/ca"
 EXPECT_EXISTS "$dest/ca.pub"
 EXPECT_EXISTS "$dest/policy/grants"
 EXPECT_EXISTS "$dest/policy/identities"
+EXPECT_EXISTS "$dest/krl"
 SUCCESS
 #####
 
@@ -141,6 +142,7 @@ RUN ../hiba-ca.sh -d "$dest" -s -h -I host1 -V +30d -H owner:user1 -- -P secret 
 RUN ../hiba-ca.sh -d "$dest" -s -h -I host2 -V +30d -H owner:user2 -- -P secret &>> "$log"
 EXPECT_EXISTS "$dest/hosts/host1-cert.pub"
 EXPECT_EXISTS "$dest/hosts/host2-cert.pub"
+EXPECT_EQ $(cat "$dest/logs" | wc -l) 2
 SUCCESS
 #####
 
@@ -287,22 +289,22 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: create file"
-RUN ../hiba-grl -f "$dest/grl" -r -s 42 1 &>> "$log"
+RUN ../hiba-grl -f "$dest/grl.manual" -r -s 42 1 &>> "$log"
 GOTCODE=$?
 EXPECT_EQ 0 "$GOTCODE"
 SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: update new serial"
-RUN ../hiba-grl -f "$dest/grl" -r -s 0x1234 2 3 &>> "$log"
+RUN ../hiba-grl -f "$dest/grl.manual" -r -s 0x1234 2 3 &>> "$log"
 GOTCODE=$?
 EXPECT_EQ 0 "$GOTCODE"
-GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl" -d | grep timestamp | awk '{print $2}')
+GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl.manual" -d | grep timestamp | awk '{print $2}')
 SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: dump file"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -d)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -d)
 GOTCODE=$?
 EXPECTED="HIBA GRL (v1):
   comment: Generated using hiba-grl
@@ -316,7 +318,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: filter by serial"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -d -s 0x1234)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -d -s 0x1234)
 GOTCODE=$?
 EXPECTED="HIBA GRL (v1):
   comment: Generated using hiba-grl
@@ -329,7 +331,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: test valid"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 0)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -t -s 0x1234 0)
 GOTCODE=$?
 EXPECTED="[0000000000001234]: 0 Valid"
 EXPECT_EQ "$EXPECTED" "$GOT"
@@ -338,7 +340,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: test revoked"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 2)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -t -s 0x1234 2)
 GOTCODE=$?
 EXPECTED="[0000000000001234]: 2 Revoked"
 EXPECT_EQ "$EXPECTED" "$GOT"
@@ -347,7 +349,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: test multiple"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -t -s 0x1234 0 1 2 3)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -t -s 0x1234 0 1 2 3)
 GOTCODE=$?
 EXPECTED="[0000000000001234]: 0 Valid
 [0000000000001234]: 1 Valid
@@ -359,7 +361,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-chk: extension: non revoked grant"
-GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl" -r root -p user1 "$dest/policy/grants/all")
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl.manual" -r root -p user1 "$dest/policy/grants/all")
 GOTCODE=$?
 EXPECT_EQ "user1" "$GOT"
 EXPECT_EQ 0 "$GOTCODE"
@@ -367,15 +369,15 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: update existing serial"
-RUN ../hiba-grl -f "$dest/grl" -r -s 42 0 &>> "$log"
+RUN ../hiba-grl -f "$dest/grl.manual" -r -s 42 0 &>> "$log"
 GOTCODE=$?
 EXPECT_EQ 0 "$GOTCODE"
-GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl" -d | grep timestamp | awk '{print $2}')
+GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl.manual" -d | grep timestamp | awk '{print $2}')
 SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: dump file"
-GOT=$(RUN ../hiba-grl -f "$dest/grl" -d)
+GOT=$(RUN ../hiba-grl -f "$dest/grl.manual" -d)
 GOTCODE=$?
 EXPECTED="HIBA GRL (v1):
   comment: Generated using hiba-grl
@@ -389,10 +391,57 @@ SUCCESS
 #####
 
 START_TEST "hiba-chk: extension: revoked grant"
-GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl" -r root -p user1 "$dest/policy/grants/all")
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user1" -g "$dest/grl.manual" -r root -p user1 "$dest/policy/grants/all")
 GOTCODE=$?
 EXPECT_EQ "" "$GOT"
 EXPECT_EQ 43 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-ca.sh: extension: revoke certificate 1"
+echo "serial: 1" > "$dest/revocation-spec.1"
+RUN ../hiba-ca.sh -d "$dest" -k -r -z "$dest/revocation-spec.1" &>> "$log"
+GOT=$(RUN ../hiba-ca.sh -d "$dest" -l -k | grep 'serial: 1')
+EXPECT_EQ "serial: 1" "$GOT"
+SUCCESS
+#####
+
+START_TEST "hiba-ca.sh: extension: inspect logs"
+RUN ../hiba-gen -f "$dest/policy/grants/toberemoved" domain hibassh.dev nomatch true &>> "$log"
+RUN ../hiba-ca.sh -d "$dest" -p -I user1 -H toberemoved -- -P secret &>> "$log"
+RUN ../hiba-ca.sh -d "$dest" -s -u -I user1 -H toberemoved -- -P secret &>> "$log"
+GOT_SERIAL=$(tail -n 1 "$dest/logs" | cut -d, -f2)
+GOT=$(RUN ../hiba-ca.sh -d "$dest" -k | grep toberemoved)
+EXPECT_EQ "1" "$(echo $GOT | wc -l)"
+SUCCESS
+#####
+
+START_TEST "hiba-ca.sh: extension: revoke grant from policy remove"
+echo y | RUN ../hiba-ca.sh -d "$dest" -p -r -I user1 -H toberemoved -- -P secret &>> "$log"
+SERIAL="$(printf '0x%.16x' $GOT_SERIAL)"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d -s $GOT_SERIAL | grep "$SERIAL")
+EXPECT_EQ "  [$SERIAL]: 10" "$GOT"
+SUCCESS
+#####
+
+START_TEST "hiba-ca.sh: extension: revoke grant explicitely"
+RUN ../hiba-ca.sh -d "$dest" -p -I user1 -H toberemoved -- -P secret &>> "$log"
+RUN ../hiba-ca.sh -d "$dest" -s -u -I user1 -H toberemoved -- -P secret &>> "$log"
+echo y | RUN ../hiba-ca.sh -d "$dest" -k -r -H "toberemoved" &>> "$log"
+GOT_SERIAL=$(tail -n 1 "$dest/logs" | cut -d, -f2)
+SERIAL="$(printf '0x%.16x' $GOT_SERIAL)"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d -s $GOT_SERIAL | grep "$SERIAL")
+EXPECT_EQ "  [$SERIAL]: 10" "$GOT"
+SUCCESS
+#####
+
+START_TEST "hiba-ca.sh: extension: revoke selective grant"
+RUN ../hiba-ca.sh -d "$dest" -s -u -I user1 -H all -H toberemoved -- -P secret &>> "$log"
+echo y | RUN ../hiba-ca.sh -d "$dest" -k -r -H "toberemoved" &>> "$log"
+GOT_SERIAL=$(tail -n 1 "$dest/logs" | cut -d, -f2)
+SERIAL="$(printf '0x%.16x' $GOT_SERIAL)"
+GOT=$(RUN ../hiba-grl -f "$dest/grl" -d -s $GOT_SERIAL | grep "$SERIAL")
+EXPECT_EQ "  [$SERIAL]: 20" "$GOT"
 SUCCESS
 #####
 
