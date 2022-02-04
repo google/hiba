@@ -25,8 +25,27 @@ AC_ARG_WITH([opensshdir],
   [AC_MSG_ERROR([unable to find the openssh library])])
 AC_SUBST([opensshdir], [$opensshdir])
 
+# Check for openssh use of openssl
+AC_MSG_CHECKING(whether OpenSSH is configured with OpenSSL)
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+    #include "$opensshdir/config.h"
+  ], [
+    #ifdef WITH_OPENSSL
+    #if WITH_OPENSSL != 0
+    #error 1
+    #endif
+    #endif
+  ])],
+  [need_openssl=false; AC_MSG_RESULT([no])],
+  [need_openssl=true; AC_MSG_RESULT([yes])])
+AC_SUBST([need_openssl])
+
 # Checks for libraries.
-AC_SEARCH_LIBS([RAND_add], [crypto], [], [AC_MSG_ERROR([unable to find the openssl library])])
+AM_CONDITIONAL([NEED_OPENSSL], [test "x$need_openssl" = xtrue])
+AM_COND_IF([NEED_OPENSSL], [
+    AC_SEARCH_LIBS([RAND_add], [crypto], [], [AC_MSG_ERROR([unable to find the openssl library])])
+  ], [])
+
 
 # Checks for header files.
 AC_CHECK_HEADERS([inttypes.h limits.h stdint.h stdlib.h string.h unistd.h])
