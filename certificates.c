@@ -84,7 +84,7 @@ hibacert_load_extensions(struct hibacert *cert, struct sshbuf *extensions) {
 		debug3("hibacert_load_extensions: sshbuf_get_string_direct returned %d: %s", ret, ssh_err(ret));
 		return HIBA_INTERNAL_ERROR;
 	}
-	debug3("hibacert_load_extensions: total extension len %ld", len);
+	debug3("hibacert_load_extensions: total extension len %zu", len);
 
 	while (i < len) {
 		int extension_len = 0;
