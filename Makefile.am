@@ -22,11 +22,11 @@ libhiba_la_LDFLAGS = $(VERSION_INFO)
 sbin_PROGRAMS = hiba-chk hiba-gen
 
 hiba_chk_SOURCES = hiba-chk.c util.c
-hiba_chk_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat -lcrypto
+hiba_chk_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat
 hiba_chk_DEPENDENCIES = libhiba.a
 
 hiba_gen_SOURCES = hiba-gen.c util.c
-hiba_gen_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat -lcrypto
+hiba_gen_LDADD = -L@opensshdir@ -L@opensshdir@/openbsd-compat -L. -lhiba -lssh -lopenbsd-compat
 hiba_gen_DEPENDENCIES = libhiba.a
 
 dist_sbin_SCRIPTS = hiba-ca.sh
