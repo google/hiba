@@ -18,6 +18,12 @@ AC_SUBST(SONAME_CURRENT, 0)
 AC_SUBST(SONAME_REVISION, 0)
 AC_SUBST(SONAME_AGE, 0)
 
+# Check for definition of max hostname length
+AC_CHECK_DECL([HOST_NAME_MAX], [
+  ], [
+    AC_DEFINE([HOST_NAME_MAX], [64], [Maximum supported hostname size if not already defined by OS.])
+  ], [#include <limits.h>])
+
 # Checks for openssh sources
 AC_ARG_WITH([opensshdir],
   [AS_HELP_STRING([--with-opensshdir=DIR], [openssh source directory])],
