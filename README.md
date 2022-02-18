@@ -57,7 +57,7 @@ HIBA relies on a few properties provided by OpenSSH:
   to the certificate. This means the CA is responsible for verifying the scope
   of the grant before attaching it.  Similarly, the host identity is attached to
   the host certificate by the CA and must represent the target host.
-* AuthorizedPrincipalCommand: this option of the sshd_config allows invoking an
+* AuthorizedPrincipalsCommand: this option of the sshd_config allows invoking an
   external tool to dynamically generate the content of authorized_users. This
   option is used to invoke `hiba-chk`, which knows how to extract the HIBA
   extensions from user and host certificates and grants or denies access based
