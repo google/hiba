@@ -394,20 +394,16 @@ hibaext_sanity_check(const struct hibaext *ext) {
 		int i = 0;
 		char *key;
 		char *value;
-		int found_validity = 0;
 
 		while (hibaext_key_value_at(ext, i, &key, &value) == HIBA_OK) {
 			if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
 				char *ok;
 				int v = strtol(value, &ok, 0);
 
-				if (found_validity > 0)
-					ret = HIBA_GRANT_BADVALIDITY;
-				else if (ok == value || *ok != '\0')
+				if (ok == value || *ok != '\0')
 					ret = HIBA_GRANT_BADVALIDITY;
 				else if (v < 0)
 					ret =  HIBA_GRANT_BADVALIDITY;
-				++found_validity;
 			} else if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
 				size_t i;
 				int quoted = 0;

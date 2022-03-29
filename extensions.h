@@ -69,7 +69,7 @@ int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob);
  * - extension contains the required 'domain' key/pair
  * - if the extension type is identity, it doesn't contain reserved keys
  *   (validity, hostname, role, options).
- * - if the 'validity' key is set, it must be an integer and not be duplicated.
+ * - if the 'validity' key is set, it must be an integer greated than 0.
  * - identity extensions don't have duplicate keys
  * - if the 'options' key is set, it must not contain \n or unquoted
  *   whitespaces, and open quotes must be closed.
