@@ -31,7 +31,8 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 	int ret;
 	int direct = 0;
 	struct stat st;
-	size_t linesize = 0;
+	size_t nbytes = 0;
+	ssize_t linesize = 0;
 	struct sshkey *key = NULL;
 	char *line = NULL;
 
@@ -55,7 +56,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 		fatal("decode_file: fopen %s: %s", file, strerror(errno));
 	}
 
-	while (direct || getline(&line, &linesize, f) != -1) {
+	while (direct || (linesize = getline(&line, &nbytes, f)) != -1) {
 		char *cp;
 		struct sshbuf *d;
 

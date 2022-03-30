@@ -114,8 +114,10 @@ hibaext_decode(struct hibaext *ext, struct sshbuf *blob) {
 		debug3("hibaext_decode: reading pair%d: %s = %s", i, pair->key, pair->val);
 	}
 	debug3("hibaext_decode: %zu bytes left in buffer", sshbuf_len(d));
-	if (sshbuf_len(d) > 0)
+	if (sshbuf_len(d) > 0) {
 		ret = HIBA_EXT_TOOBIG;
+		goto err;
+        }
 
 	ret = hibaext_sanity_check(ext);
 err:
