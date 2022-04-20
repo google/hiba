@@ -68,8 +68,10 @@ hibaext_decode(struct hibaext *ext, struct sshbuf *blob) {
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
-	if (magic != HIBA_MAGIC)
-		return HIBA_INVALID_EXT;
+	if (magic != HIBA_MAGIC) {
+		ret = HIBA_INVALID_EXT;
+		goto err;
+	}
 	if ((ret = sshbuf_get_u32(d, &ext->type)) != 0) {
 		debug3("hibaext_decode: sshbuf_get_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
