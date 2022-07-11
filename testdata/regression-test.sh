@@ -196,7 +196,7 @@ START_TEST "hiba-gen: raw grants"
 EXPECTED="grant@hibassh.dev (v1):
  [0] domain = 'hibassh.dev'"
 RUN ../hiba-gen -f "$dest/policy/grants/base64" domain hibassh.dev &>> "$log"
-RUN base64 -d "$dest/policy/grants/base64" > "$dest/policy/grants/raw"
+base64 -d "$dest/policy/grants/base64" > "$dest/policy/grants/raw"
 GOT=$(RUN ../hiba-gen -d -f "$dest/policy/grants/raw")
 EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
