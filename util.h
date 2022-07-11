@@ -8,6 +8,8 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
+#include <sys/types.h>
+
 /* Swiss army knife function for decoding input of hiba-* tools.
  * It supports:
  * - wrapped base64 SSH certificate
