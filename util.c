@@ -163,7 +163,6 @@ open_grl(const char *file, unsigned char **ptr, u_int64_t *sz, int *mmapped) {
 	*sz = st.st_size;
 
 	close(f);
-	return;
 }
 
 void
