@@ -289,7 +289,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: create file"
-RUN ../hiba-grl -f "$dest/grl.manual" -r -s 42 1 &>> "$log"
+RUN ../hiba-grl -f "$dest/grl.manual" -r -s 43 1 &>> "$log"
 GOTCODE=$?
 EXPECT_EQ 0 "$GOTCODE"
 SUCCESS
@@ -310,7 +310,7 @@ EXPECTED="HIBA GRL (v1):
   comment: Generated using hiba-grl
   timestamp: $GRL_TIMESTAMP
   entries: 2
-  [0x000000000000002a]: 20
+  [0x000000000000002b]: 20
   [0x0000000000001234]: C0"
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECT_EQ 0 "$GOTCODE"
@@ -369,7 +369,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-grl: revoke: update existing serial"
-RUN ../hiba-grl -f "$dest/grl.manual" -r -s 42 0 &>> "$log"
+RUN ../hiba-grl -f "$dest/grl.manual" -r -s 43 0 &>> "$log"
 GOTCODE=$?
 EXPECT_EQ 0 "$GOTCODE"
 GRL_TIMESTAMP=$(../hiba-grl -f "$dest/grl.manual" -d | grep timestamp | awk '{print $2}')
@@ -383,7 +383,7 @@ EXPECTED="HIBA GRL (v1):
   comment: Generated using hiba-grl
   timestamp: $GRL_TIMESTAMP
   entries: 2
-  [0x000000000000002a]: 30
+  [0x000000000000002b]: 30
   [0x0000000000001234]: C0"
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECT_EQ 0 "$GOTCODE"

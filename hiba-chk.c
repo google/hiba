@@ -19,6 +19,9 @@
 #include "openbsd-compat/bsd-misc.h"
 #include "util.h"
 
+#define USER_DEFAULT_CERT_SERIAL (42 + 1)
+#define HOST_DEFAULT_CERT_SERIAL (42 - 1)
+
 void
 usage() {
 	fprintf(stderr, "usage:\n");
@@ -144,13 +147,25 @@ main(int argc, char **argv) {
 
 		if (host == NULL) {
 			host = hibacert_new();
-			if ((ret = hibacert_from_ext(host, identity, principal, 0, 42)) < 0)
+			// If we got a HIBA identity extension with no SSH
+			// certificate, we must emulate the certificate serial
+			// and issued time. We do this with the following
+			// values: hardcoded certificate serial (causes
+			// revocations to be all or nothing), and issued on the
+			// UNIX epoch.
+			if ((ret = hibacert_from_ext(host, identity, principal, 0, HOST_DEFAULT_CERT_SERIAL)) < 0)
 				fatal("%s: creating host certificate from extension: %s", __progname, hiba_err(ret));
 			identity = NULL;
 		}
 		if (user == NULL) {
 			user = hibacert_new();
-			if ((ret = hibacert_from_ext(user, grant, principal, time(NULL), 42)) < 0)
+			// If we got a HIBA grant extension with no SSH
+			// certificate, we must emulate the certificate serial
+			// and issued time. We do this with the following
+			// values: hardcoded certificate serial (causes
+			// revocations to be all or nothing), and issued now
+			// (causes validity to always pass).
+			if ((ret = hibacert_from_ext(user, grant, principal, time(NULL), USER_DEFAULT_CERT_SERIAL)) < 0)
 				fatal("%s: creating user certificate from extension: %s", __progname, hiba_err(ret));
 			grant = NULL;
 		}

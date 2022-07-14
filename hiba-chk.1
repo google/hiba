@@ -31,6 +31,7 @@ accepts direct HIBA extensions, mostly for testing, or debugging authorizations.
 .I -p principal
 option must be provided as it can't be extracted from the
 .RI "" "user_certificate" "."
+The certificate serial and issued time will be hardcoded, causing revocations to be all or nothing and validity check to always pass.
 .PP
 .B hiba-chk
 also requires the
