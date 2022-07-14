@@ -450,9 +450,9 @@ int
 hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) {
 	u_int64_t offset;
 	u_int64_t size;
-	u_int64_t min = 0;
-	u_int64_t max;
-	u_int64_t cur;
+	int64_t min = 0;
+	int64_t max;
+	int64_t cur;
 
 	if (grl == NULL)
 		return HIBA_BAD_PARAMS;
@@ -464,7 +464,6 @@ hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) 
 		return HIBA_OK;
 
 	max = grl->n_serials - 1;
-	cur = (max - min) / 2;
 
 	// First we search through serials.
 	while (1) {
@@ -472,31 +471,24 @@ hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) 
 		u_int64_t max_serial = PEEK_U64(&grl->serials[max].serial);
 		u_int64_t cur_serial;
 
-		if ((min_serial > serial) ||
-		    (max_serial < serial)) {
-			debug2("hibagrl_check: outside of GRL range [0x%" PRIx64 " - 0x%" PRIx64 "]: 0x%" PRIx64,
-			       min_serial, max_serial, serial);
-			return HIBA_OK;
-		}
+		cur = min + ((max - min) / 2);
 
 		cur_serial = PEEK_U64(&grl->serials[cur].serial);
-		debug3("hibagrl_check: current serial 0x%" PRIx64 " @%" PRIx64, cur_serial, cur);
+		debug3("hibagrl_check: window [0x%" PRIx64 " (@%" PRIx64 ") - 0x%" PRIx64 " (@%" PRIx64 ")]", min_serial, min, max_serial, max);
+		debug3("hibagrl_check: target 0x%" PRIx64 " against current serial 0x%" PRIx64 "(@%" PRIx64 ")", serial, cur_serial, cur);
 
 		if (cur_serial == serial) {
 			// We only break the loop when we found a matching
 			// serial which index we store in cur.
 			break;
 		} else if (cur_serial > serial) {
-			max = cur;
-			cur = min + ((max - min) / 2);
+			max = cur - 1;
 		} else if (cur_serial < serial) {
-			min = cur;
-			cur = min + ((max - min) / 2) + 1;
+			min = cur + 1;
 		}
 
-		// There is nothing left between min and max. We can return OK.
-		if (max == min) {
-			debug2("hibagrl_check: not present in GRL: 0x%" PRIx64, serial);
+		if (max < min) {
+			debug2("hibagrl_check: serial not found in GRL");
 			return HIBA_OK;
 		}
 	}
