@@ -132,7 +132,7 @@ hibachk_result(struct hibaext *result) {
 }
 
 int
-hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, u_int32_t idx, const char *role) {
+hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
 	u_int32_t i;
 	u_int32_t version;
@@ -159,8 +159,8 @@ hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, u_int3
 		return HIBA_CHECK_BADVERSION;
 
 	// Test GRL
-	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, env->cert_serial);
-	if (env->grl != NULL && (ret = hibagrl_check(env->grl, env->cert_serial, idx)) < 0) {
+	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, user_serial);
+	if (env->grl != NULL && (ret = hibagrl_check(env->grl, user_serial, idx)) < 0) {
 		return ret;
 	}
 
