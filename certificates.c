@@ -134,7 +134,7 @@ hibacert_parse(struct hibacert *cert, struct sshkey *key) {
 	if (sshbuf_len(cert->key->cert->extensions) == 0)
 		return HIBA_OK;
 	if ((extensions = sshbuf_fromb(cert->key->cert->extensions)) == NULL)
-		return HIBA_OK;
+		return HIBA_INTERNAL_ERROR;
 
 	// Look for HIBA extensions
 	debug2("hibacert_parse: looking for HIBA extensions for cert type %d", cert->key->cert->type);
