@@ -170,6 +170,7 @@ hibacert_parse(struct hibacert *cert, struct sshkey *key) {
 				sshbuf_free(extension);
 				goto err;
 			}
+			sshbuf_free(extension);
 		} else {
 			sshbuf_skip_string(extensions);
 		}
