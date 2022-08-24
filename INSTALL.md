@@ -9,12 +9,12 @@ the compilation will fail. For instructions compiling OpenSSH, refer to the
 [INSTALL](https://github.com/openssh/openssh-portable/blob/master/INSTALL) file
 inside OpenSSH's sources.
 
-To compile HIBA, run the `./autogen.sh` followed by `./configure` using
+To compile HIBA, run the `./bootstrap.sh` followed by `./configure` using
 the `--with-opensshdir` pointing at the root of the OpenSSH sources, and
 finally, run `make`.
 
 ```
-$ ./autogen.sh 
+$ ./bootstrap.sh
 $ ./configure --with-opensshdir=/path/to/openssh/sources/ --prefix=/usr/
 $ make
 ```
