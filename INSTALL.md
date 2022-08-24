@@ -2,7 +2,11 @@
 
 ## Compilation
 
-HIBA depends on OpenSSH source code for building and relies on the autotools.
+HIBA depends on OpenSSH source code (and indirectly on OpenSSL). It relies on
+the autotools for building.
+
+Note on OpenSSL: If OpenSSH is compiled without OpenSSL, HIBA will not be able
+to extract extensions from certificates and fail close.
 
 Make sure OpenSSH is compiled before running `make` in the HIBA directory, or
 the compilation will fail. For instructions compiling OpenSSH, refer to the
@@ -11,11 +15,24 @@ inside OpenSSH's sources.
 
 To compile HIBA, run the `./bootstrap.sh` followed by `./configure` using
 the `--with-opensshdir` pointing at the root of the OpenSSH sources, and
-finally, run `make`.
+optionally `--with-openssldir` pointing at the OpenSSL sources (if not
+installed in a standard path). Finally, run `make`.
+
+Example:
 
 ```
+# Build OpenSSL (optional)
+$ ./config
+$ make
+
+# Build OpenSSH
+$ autoreconf
+$ ./configure --with-ssl-dir=/path/to/openssl/sources/
+$ make
+
+# Build HIBA
 $ ./bootstrap.sh
-$ ./configure --with-opensshdir=/path/to/openssh/sources/ --prefix=/usr/
+$ ./configure --with-opensshdir=/path/to/openssh/sources/ --with-openssldir=/path/to/openssl/sources/ --prefix=/usr/
 $ make
 ```
 
