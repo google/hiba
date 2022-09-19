@@ -24,11 +24,11 @@
 
 void
 usage() {
-	fprintf(stderr, "usage:\n");
+	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "  With certificates\n");
-	fprintf(stderr, "    hiba-chk -i <identity> -r <role> -g <grl_path> certificate\n");
+	fprintf(stderr, "    $ hiba-chk -i <identity> -r <role> -g <grl_path> certificate\n");
 	fprintf(stderr, "  With grants\n");
-	fprintf(stderr, "    hiba-chk -i <identity> -r <role> -g <grl_path> -p principal grant\n");
+	fprintf(stderr, "    $ hiba-chk -i <identity> -r <role> -g <grl_path> -p principal grant\n");
 	exit(1);
 }
 
