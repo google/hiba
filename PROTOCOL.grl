@@ -32,8 +32,8 @@ Where magic is defined as:
 ```
 
 The subsequent section contains a sorted list of certificate serial numbers
-associated with an index. Each entry has a fixed size in order to allow quick
-lookups. The index is used to find the corresponding bitmap of revoked grants
+associated with an offset. Each entry has a fixed size in order to allow quick
+lookups. The offset is used to find the corresponding bitmap of revoked grants
 in the next section.
 
 ```
@@ -41,18 +41,49 @@ in the next section.
 	uint64 offset
 ```
 
-The last section contains a list of bitmaps. The offset of each bit in the map
-represents the position of a grant in the certificate. This means that the
-order of grants in a certificate matters.
-
-Each bitmap is represented by:
+The last section contains a list of bitmaps corresponding to serial entries from
+the previous section. The offset of each bit in the map, for a given serial,
+represents the position of a grant in the certificate. This means that the order
+of grants in a certificate matters.
 
 ```
-	uint16 size
 	char[] bitmap
 ```
 
+The size of each bitmap is variable, consisting of a char[] of length one or
+more depending on the position of revoked grants in the certificate. The size of
+a bitmap for a serial[i] can be calculated using the offsets for serial[i] and
+serial[i+1].
+
+```
+	size = serial[i+1].offset - serial[i].offset
+```
+
+When serial[i] is the final serial in the serials list section the grant
+revocation map section size must be used to calculate the bitmap size instead of
+the serial[i+1] offset.
+
+```
+	size = revocation_map_size - serial[i].offset
+```
+
 Finally, the file also contains a trailer magic (same value as header magic).
+
+## Grant Revocation Check
+
+A grant is revoked for a given certificate only when all of the following
+conditions are met.
+
+1. The certificate serial is found in the serials list section.
+2. The grant index from the certificate falls within the bounds of the relevant
+   revocation bitmap.  See the GRL format documentation above for information on
+   calculating the size of a bitmap.
+
+```
+	floor(grant_idx / 8) <= bitmap_size
+```
+
+3. The bit in the map corresponding to the grant index must equal 1.
 
 ## Usage
 
