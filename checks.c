@@ -119,8 +119,6 @@ hibachk_result(struct hibaext *result) {
 			ret = HIBA_CHECK_BADHOSTNAME;
 		else if (strcmp(key, HIBA_KEY_ROLE) == 0)
 			ret = HIBA_CHECK_BADROLE;
-		else if (strcmp(key, HIBA_KEY_VALIDITY) == 0)
-			ret = HIBA_CHECK_EXPIRED;
 		else
 			ret = HIBA_CHECK_DENIED;
 	}
@@ -134,10 +132,9 @@ hibachk_result(struct hibaext *result) {
 int
 hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
-	u_int32_t i;
+	char *value;
 	u_int32_t version;
 	u_int32_t min_version;
-	struct hibaext *result = NULL;
 
 	debug2("hibachk_authorize: performing sanity checks");
 
@@ -164,33 +161,51 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		return ret;
 	}
 
+	// Test grant validity relative to its certificate
+	if ((ret = hibaext_value_for_key(grant, HIBA_KEY_VALIDITY, &value)) == 0) {
+		int v = strtol(value, NULL, 0);
+		free(value);
+
+		debug2("hibachk_authorize: testing 'validity' key");
+		if ((env->cert_issue_ts + v) < env->now) {
+			return HIBA_CHECK_EXPIRED;
+		}
+	}
+	// The grant looks OK, we can run the policy authorization checks.
+	return hibachk_query(env->identity, grant, env->hostname, role);
+}
+
+int
+hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const char *hostname, const char *role) {
+	int ret;
+	u_int32_t i;
+	struct hibaext *result = NULL;
+
 	result = hibaext_new();
 
-	// Test all other keys
+	// Test all keys from the grant against the identity:
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		char *key;
 		char *value;
 
 		if ((ret = hibaext_key_value_at(grant, i, &key, &value)) < 0) {
-			debug2("hibachk_authorize: failed to extract key/pair");
+			debug2("hibachk_query: failed to extract key/pair");
 			goto err;
 		} else if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
-			debug2("hibachk_authorize: skipping 'options' key");
+			debug2("hibachk_query: skipping 'options' key");
 			continue;
 		} else if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
-			int v = strtol(value, NULL, 0);
-
-			debug2("hibachk_authorize: testing 'validity' key");
-			ret = ((env->cert_issue_ts + v) < env->now);
+			debug2("hibachk_query: skipping 'validity' key: already verified");
+			continue;
 		} else if (strcmp(key, HIBA_KEY_HOSTNAME) == 0) {
-			debug2("hibachk_authorize: testing hostname %s", value);
-			ret = strcmp(env->hostname, value);
+			debug2("hibachk_query: testing hostname %s", value);
+			ret = strcmp(hostname, value);
 		} else if (strcmp(key, HIBA_KEY_ROLE) == 0) {
-			debug2("hibachk_authorize: testing role %s", value);
+			debug2("hibachk_query: testing role %s", value);
 			ret = strcmp(role, value);
 		} else {
-			debug2("hibachk_authorize: testing generic key");
-			ret = hibachk_keycmp(env->identity, key, value);
+			debug2("hibachk_query: testing generic key");
+			ret = hibachk_keycmp(identity, key, value);
 		}
 
 		hibachk_register_result(result, key, ret);
@@ -227,7 +242,7 @@ hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl) {
 	env->identity = exts[0];
 	env->now = time(NULL);
 	gethostname(env->hostname, HOST_NAME_MAX);
-	if ((ret = hibaext_versions(exts[0], &env->version, &env->min_version)) < 0) {
+	if ((ret = hibaext_versions(env->identity, &env->version, &env->min_version)) < 0) {
 		debug2("hibaenv_from_host: hibaext_versions returned %d: %s", ret, hiba_err(ret));
 		goto err;
 	}
