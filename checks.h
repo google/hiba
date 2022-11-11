@@ -29,6 +29,13 @@ int hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial,
 void hibachk_authorized_users(const struct hibaenv *env,
                               const struct hibacert *cert, int idx, FILE *f);
 
+/* Query whether a grant would be allowed on a machine with the given identity.
+ * This function must not be used directly for authorization decisions, as it
+ * doesn't consider the host environment, and performs no sanity checks.
+ * Prefer hibachk_authorize(). */
+int hibachk_query(const struct hibaext *identity, const struct hibaext *grant,
+                  const char *hostname, const char *role);
+
 /* Create an environment from a host certificate with a HIBA identity grant
  * Resulting struct hibaenv must be released using hibaenv_free(). */
 struct hibaenv *hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl);

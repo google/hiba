@@ -48,10 +48,10 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 	for (i = 0; i < len; ++i) {
 		verbose("check_access: checking grant %d.", i);
 		if ((ret = hibachk_authorize(env, user_serial, grants[i], i, role)) == HIBA_OK) {
-			verdict = 0;
+			verdict = HIBA_OK;
 			hibachk_authorized_users(env, cert, i, stdout);
 		} else {
-			if (verdict != 0)
+			if (verdict != HIBA_OK)
 				verdict = ret;
 			verbose("check_access: denied: %s", hiba_err(ret));
 		}
