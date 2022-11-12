@@ -22,14 +22,6 @@
 #include "sshkey.h"
 #include "xmalloc.h"
 
-/* OpenSSH's sshkey_sign function depends on a sshsk_sign function provided by
- * the caller. HIBA doesn't use this symbols but it ends up implicitly imported
- * along with the sshkey_read function. To work around that and make the linker
- * happy, we declare a dummy sshsk_sign().
- */
-int
-sshsk_sign() { abort(); return 0; }
-
 void
 decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 	FILE *f = NULL;
