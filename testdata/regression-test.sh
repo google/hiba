@@ -167,12 +167,14 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: display certificates"
-EXPECTED="certificate 'user1' contains 1 HIBA grants
+EXPECTED="certificate 'user1' (1 principal) contains 1 HIBA grant
+ principal: 'user1'
 grant@hibassh.dev (v1):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$dest/users/user1-cert.pub")
 EXPECT_EQ "$EXPECTED" "$GOT"
-EXPECTED="certificate 'user2' contains 2 HIBA grants
+EXPECTED="certificate 'user2' (1 principal) contains 2 HIBA grants
+ principal: 'user2'
 grant@hibassh.dev (v1):
  [0] domain = 'hibassh.dev'
  [1] location = 'EU'
@@ -186,7 +188,8 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: certificate in cmdline"
-EXPECTED="certificate 'user1' contains 1 HIBA grants
+EXPECTED="certificate 'user1' (1 principal) contains 1 HIBA grant
+ principal: 'user1'
 grant@hibassh.dev (v1):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$(cat $dest/users/user1-cert.pub)")
