@@ -183,7 +183,7 @@ main(int argc, char **argv) {
 			}
 		}
 
-		env = hibaenv_from_host(host, grl);
+		env = hibaenv_from_host(host, user, grl);
 		ret = check_access(env, user, role);
 		hibaenv_free(env);
 		hibagrl_free(grl);
