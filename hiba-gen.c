@@ -55,9 +55,9 @@ print_hiba(const struct hibaext *ext) {
 
 void
 handle_cert(struct hibacert *cert) {
-	int i;
-	int len;
 	int ret;
+	int len;
+	u_int32_t i;
 	char *keyid;
 	struct hibaext **exts;
 
@@ -65,10 +65,13 @@ handle_cert(struct hibacert *cert) {
 		fatal("decode_cert: failed to fetch extension: %s", hiba_err(ret));
 
 	keyid = hibacert_cert(cert)->key_id;
-	printf("certificate '%s' contains %d HIBA grants\n", keyid, len);
-	for (i = 0; i < len; ++i)
+	printf("certificate '%s' (%d principal%s) contains %d HIBA grant%s\n", keyid,
+		hibacert_cert(cert)->nprincipals, (hibacert_cert(cert)->nprincipals > 1 ? "s" : ""),
+		len, (len > 1 ? "s" : ""));
+	for (i = 0; i < hibacert_cert(cert)->nprincipals; ++i)
+		printf(" principal: '%s'\n", hibacert_cert(cert)->principals[i]);
+	for (i = 0; i < (u_int32_t)len; ++i)
 		print_hiba(exts[i]);
-
 }
 
 void
