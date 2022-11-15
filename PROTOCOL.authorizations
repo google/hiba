@@ -44,7 +44,10 @@ about the matching capabilities.
 
 The reserved keys are evaluated as follows:
 
-* role: evaluated as a normal constraint against the requested role.
+* role: evaluated as a normal constraint against the requested role. The
+  special value @PRINCIPALS will be automatically expanded to the list of
+  principals declared in the certificate in order to dynamically allow users to
+  SSH as themselves.
 * hostname: evaluated as a normal constraint against the hostname system call.
 * domain: evaluated as a normal constraint against the identity domain.
   Authorization fails if missing.

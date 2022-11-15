@@ -86,5 +86,7 @@ HIBA reserves five extension keys with a special meaning:
 :           : date. This means that a certificate can have unlimited validity, :
 :           : but some of the grants attached would be able to expire          :
 :           : independently.                                                   :
-| role      | The target requested role to grant access to. This can be the    |
-:           : principal itself or any other role available on the target host. :
+| role      | The target requested role to grant access to. This can be any    |
+:           : role available on the target host. The special value @PRINCIPALS :
+:           : will be automatically expanded to the list of principals declared:
+:           : in the certificate.                                              :
