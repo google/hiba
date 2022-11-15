@@ -132,7 +132,9 @@ hibachk_result(struct hibaext *result) {
 int
 hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
-	char *value;
+	long expiration = 0;
+	long expiration_set = 0;
+	u_int32_t i;
 	u_int32_t version;
 	u_int32_t min_version;
 
@@ -161,16 +163,34 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		return ret;
 	}
 
-	// Test grant validity relative to its certificate
-	if ((ret = hibaext_value_for_key(grant, HIBA_KEY_VALIDITY, &value)) == 0) {
-		int v = strtol(value, NULL, 0);
-		free(value);
+	// Test for expiration.
+	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
+		char *key;
+		char *value;
 
-		debug2("hibachk_authorize: testing 'validity' key");
-		if ((env->cert_issue_ts + v) < env->now) {
-			return HIBA_CHECK_EXPIRED;
+		if ((ret = hibaext_key_value_at(grant, i, &key, &value)) < 0) {
+			debug2("hibachk_authorize: failed to extract key/pair");
+			return ret;
+		} else if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
+			// Test for grant expiration based on certificate's own
+			// valid from time.
+			long v = strtol(value, NULL, 0);
+			free(value);
+
+			expiration_set = 1;
+			// We look for the expiration that is furthest in the
+			// future.
+			if (v > expiration) {
+				expiration = v;
+			}
 		}
 	}
+
+	if (expiration_set && ((env->cert_issue_ts + expiration) < env->now)) {
+		debug2("hibachk_authorize: expired");
+		return HIBA_CHECK_EXPIRED;
+	}
+
 	// The grant looks OK, we can run the policy authorization checks.
 	return hibachk_query(env->identity, grant, env->hostname, role);
 }
