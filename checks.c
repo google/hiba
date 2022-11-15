@@ -38,6 +38,10 @@ struct hibaenv {
 	u_int64_t cert_issue_ts;
 	u_int64_t cert_serial;
 
+	// Grant
+	u_int32_t nprincipals;
+	char **principals;
+
 	// Extension
 	u_int32_t version;
 	u_int32_t min_version;
@@ -132,6 +136,7 @@ hibachk_result(struct hibaext *result) {
 int
 hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
+	int expand_self = 0;
 	long expiration = 0;
 	long expiration_set = 0;
 	u_int32_t i;
@@ -163,7 +168,7 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		return ret;
 	}
 
-	// Test for expiration.
+	// Test for expiration and whether to expand allowed roles.
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		char *key;
 		char *value;
@@ -183,12 +188,32 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 			if (v > expiration) {
 				expiration = v;
 			}
+		} else if ((strcmp(key, HIBA_KEY_ROLE) == 0) && (strcmp(value, HIBA_ROLE_SELF) == 0)) {
+			// A grant using __SELF__ as role must be expanded to
+			// allow all the principals declared in the certificate,
+			// on top of other roles declared in the grant.
+			expand_self = 1;
 		}
 	}
 
 	if (expiration_set && ((env->cert_issue_ts + expiration) < env->now)) {
 		debug2("hibachk_authorize: expired");
 		return HIBA_CHECK_EXPIRED;
+	}
+
+	if (expand_self) {
+		int role_is_self = 0;
+		debug2("hibachk_authorize: expanding __SELF__");
+		for (i = 0; i < env->nprincipals; ++i) {
+			if (strcmp(env->principals[i], role) == 0) {
+				role_is_self = 1;
+				break;
+			}
+		}
+		if (!role_is_self) {
+			return HIBA_CHECK_BADROLE;
+		}
+		role = HIBA_ROLE_SELF;
 	}
 
 	// The grant looks OK, we can run the policy authorization checks.
@@ -240,9 +265,10 @@ err:
 }
 
 struct hibaenv*
-hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl) {
+hibaenv_from_host(const struct hibacert *host, const struct hibacert *user, const struct hibagrl *grl) {
 	int len;
 	int ret;
+	uint32_t i;
 	struct hibaext **exts;
 	struct hibaenv *env = calloc(sizeof(struct hibaenv), 1);
 
@@ -269,6 +295,9 @@ hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl) {
 	env->cert_serial = hibacert_cert(host)->serial;
 	env->cert_issue_ts = hibacert_cert(host)->valid_after;
 
+	env->nprincipals = hibacert_cert(user)->nprincipals;
+	env->principals = hibacert_cert(user)->principals;
+
 	env->grl = grl;
 	if (grl != NULL) {
 		verbose("hibaenv_from_host: loading GRL v%d", hibagrl_version(env->grl));
@@ -284,6 +313,9 @@ hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl) {
 	verbose("  min_version: %u", env->min_version);
 	verbose("  cert_serial: %" PRIx64, env->cert_serial);
 	verbose("  cert_issue_ts: %" PRIu64, env->cert_issue_ts);
+	for (i = 0; i < env->nprincipals; ++i) {
+		verbose("  user principal: %s", env->principals[i]);
+	}
 
 	return env;
 err:

@@ -76,10 +76,12 @@ RUN ../hiba-gen -f "$dest/policy/grants/lockedcmd" domain hibassh.dev options 'c
 RUN ../hiba-gen -f "$dest/policy/grants/badcmd" domain hibassh.dev options "command=uname -a" &>> "$log"
 RUN ../hiba-gen -f "$dest/policy/grants/all" domain hibassh.dev &>> "$log"
 RUN ../hiba-gen -f "$dest/policy/grants/disallowed" domain hibassh.dev &>> "$log"
+RUN ../hiba-gen -f "$dest/policy/grants/selfonly" domain hibassh.dev role __SELF__ &>> "$log"
 EXPECT_EXISTS "$dest/policy/grants/all"
 EXPECT_EXISTS "$dest/policy/grants/location:eu"
 EXPECT_EXISTS "$dest/policy/grants/purpose:testing"
 EXPECT_EXISTS "$dest/policy/grants/disallowed"
+EXPECT_EXISTS "$dest/policy/grants/selfonly"
 EXPECT_NOT_EXISTS "$dest/policy/grants/badcmd"
 SUCCESS
 #####
@@ -228,6 +230,22 @@ SUCCESS
 
 START_TEST "hiba-chk: extension: deny bad role"
 GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user2" -r root -p user1 "$dest/policy/grants/purpose:testing")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 46 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: allow SELF role"
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user2" -r user1 -p user1 "$dest/policy/grants/selfonly")
+GOTCODE=$?
+EXPECT_EQ "user1" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: deny SELF role"
+GOT=$(RUN ../hiba-chk -i "$dest/policy/identities/owner:user2" -r user2 -p user1 "$dest/policy/grants/selfonly")
 GOTCODE=$?
 EXPECT_EQ "" "$GOT"
 EXPECT_EQ 46 "$GOTCODE"

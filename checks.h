@@ -14,6 +14,8 @@
 #include "extensions.h"
 #include "revocations.h"
 
+#define HIBA_ROLE_SELF "__SELF__"
+
 struct hibaenv;
 
 /* Check whether the grant extension authorized access to the target
@@ -36,9 +38,9 @@ void hibachk_authorized_users(const struct hibaenv *env,
 int hibachk_query(const struct hibaext *identity, const struct hibaext *grant,
                   const char *hostname, const char *role);
 
-/* Create an environment from a host certificate with a HIBA identity grant
+/* Create an environment from  host and user certificates with HIBA grants
  * Resulting struct hibaenv must be released using hibaenv_free(). */
-struct hibaenv *hibaenv_from_host(const struct hibacert *host, const struct hibagrl *grl);
+struct hibaenv *hibaenv_from_host(const struct hibacert *host, const struct hibacert *user, const struct hibagrl *grl);
 
 /* Destructor for hibaenv. */
 void hibaenv_free(struct hibaenv *env);
