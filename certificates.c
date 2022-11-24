@@ -17,6 +17,14 @@
 #include "ssherr.h"
 #include "xmalloc.h"
 
+/* OpenSSH's sshkey_sign function depends on a sshsk_sign function provided by
+ * the caller. HIBA doesn't use this symbols but it ends up implicitly imported
+ * along with the sshkey_read function. To work around that and make the linker
+ * happy, we declare a weak dummy sshsk_sign().
+ */
+int  __attribute__((weak))
+sshsk_sign() { abort(); return 0; }
+
 struct hibacert {
 	struct sshkey *key;
 	struct hibaext **exts;
