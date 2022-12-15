@@ -107,6 +107,10 @@ OpenSSH API defined in
   * Sign the certificate with the CA private key
   * Serialize it
 
+For a simple local test setup see the
+ [testing](https://github.com/google/hiba/blob/main/INSTALL.md#testing)
+section of [INSTALL.md](https://github.com/google/hiba/blob/main/INSTALL.md).
+
 ### Reading HIBA enabled certificates
 
 HIBA extensions can be extracted from existing certificates by relying on
@@ -124,3 +128,9 @@ interpreting them with HIBA.
 libhiba provides convenience functions to parse and extract HIBA extensions
 directly from a certificate, but it does not verify the certificate. It assumes
 the certificate was validated by a prior stage.
+
+### Example CA
+
+See the [CA](https://github.com/google/hiba/blob/main/CA.md) documentation for
+a basic example of how the tools provided with HIBA can be used to manage
+extensions and certificates.
