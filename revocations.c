@@ -170,7 +170,7 @@ hibagrl_decode(struct hibagrl *grl, struct sshbuf *blob) {
 	debug2("hibagrl_decode: serials_section_size = %" PRIu64, serials_section_size);
 	grl->serials = (const struct serials *)sshbuf_ptr(blob);
 	if (log_level_get() >= SYSLOG_LEVEL_DEBUG3) {
-		debug3("hibagrl_decode: serial list section content @%zu", blob->off);
+		debug3("hibagrl_decode: serial list section content");
 		sshbuf_dump_data(sshbuf_ptr(blob), serials_section_size, stderr);
 	}
 	if ((ret = sshbuf_consume(blob, serials_section_size)) != 0) {
@@ -186,7 +186,7 @@ hibagrl_decode(struct hibagrl *grl, struct sshbuf *blob) {
 	debug2("hibagrl_decode: bitmaps_section_size = %" PRIu64, grl->bitmaps_size);
 	grl->bitmaps = sshbuf_ptr(blob);
 	if (log_level_get() >= SYSLOG_LEVEL_DEBUG3) {
-		debug3("hibagrl_decode: bitmap section content @%zu", blob->off);
+		debug3("hibagrl_decode: bitmap section content");
 		sshbuf_dump_data(sshbuf_ptr(blob), grl->bitmaps_size, stderr);
 	}
 	if ((ret = sshbuf_consume(blob, grl->bitmaps_size)) != 0) {
