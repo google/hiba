@@ -228,9 +228,11 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 	struct hibaext *result = NULL;
 
 	result = hibaext_new();
+	hibaext_init(result, HIBA_GRANT_EXT);
 
 	// Test all keys from the grant against the identity:
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
+		int skip = 0;
 		char *key;
 		char *value;
 
@@ -239,10 +241,10 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 			goto err;
 		} else if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
 			debug2("hibachk_query: skipping 'options' key");
-			continue;
+			skip = 1;
 		} else if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
 			debug2("hibachk_query: skipping 'validity' key: already verified");
-			continue;
+			skip = 1;
 		} else if (strcmp(key, HIBA_KEY_HOSTNAME) == 0) {
 			debug2("hibachk_query: testing hostname %s", value);
 			ret = strcmp(hostname, value);
@@ -254,7 +256,9 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 			ret = hibachk_keycmp(identity, key, value);
 		}
 
-		hibachk_register_result(result, key, ret);
+		if (!skip) {
+			hibachk_register_result(result, key, ret);
+		}
 		free(key);
 		free(value);
 	}
