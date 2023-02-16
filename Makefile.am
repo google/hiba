@@ -2,9 +2,11 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 VERSION_INFO = -version-info $(SONAME_CURRENT):$(SONAME_REVISION):$(SONAME_AGE)
+AUTOMAKE_OPTIONS = subdir-objects
 ACLOCAL_AMFLAGS = -I m4
 
 ARFLAGS = cr
+AM_LIBTOOLFLAGS = "--preserve-dup-deps"
 
 include_HEADERS = hiba.h extensions.h errors.h checks.h certificates.h revocations.h
 
@@ -26,6 +28,12 @@ hiba_gen_DEPENDENCIES = libhiba.la
 hiba_grl_SOURCES = hiba-grl.c util.c
 hiba_grl_LDADD = -lhiba $(extra_LIBS)
 hiba_grl_DEPENDENCIES = libhiba.la
+
+noinst_PROGRAMS = generate-test-certs
+
+generate_test_certs_SOURCES = testdata/generate-test-certs.c
+generate_test_certs_LDADD = -lhiba $(extra_LIBS) -lhiba $(extra_LIBS)
+generate_test_certs_DEPENDENCIES = libhiba.la
 
 dist_sbin_SCRIPTS = hiba-ca.sh
 

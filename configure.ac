@@ -134,9 +134,9 @@ CFLAGS="$CFLAGS $extra_CFLAGS"
 CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS"
 LDFLAGS="$LDFLAGS $extra_LDFLAGS"
 
-# We can't generate dynamic libraries on cygwin since openssh only builds a static libssh.
 case "$host" in
 *-*-cygwin*)
+	# We can't generate dynamic libraries on cygwin since openssh only builds a static libssh.
 	AS_VAR_IF([enable_shared], [yes], [
 		AC_DISABLE_SHARED AC_MSG_WARN([Only static libraries can be buit using cygwin])
 		], [],
