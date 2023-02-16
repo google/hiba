@@ -49,9 +49,31 @@ There must be exactly one value per key.
 The HIBA tools support the identity and grant extensions both in their raw
 serialized form as well as in base64 encoding.
 
-Warning: For attaching multiple grants to a single certificate one MUST use a
-comma separated list of base64 encoded grants (raw serialized extension only
-supports one grant per certificates).
+## Support for mutliple grants
+
+For attaching multiple grants to a single certificate one MUST use one the
+two following methods:
+
+* comma separated list of base64 encoded grants (raw serialized extension only
+  supports one grant per certificates). This provides the simplest support for
+  shell scripts based management, or manual debugging.
+
+* A magic multi grant header followed by a concatenation of raw serialized
+  extensions each starting with its size stored on 32 bits. This provides the
+  shortest representation, optimizing for the total certificate size.
+
+  The magic multi grant header is defined as:
+
+  ```
+  #define HIBA_MULTI_EXTS	0x4d554c54
+  ```
+
+  Followed by repeated grants:
+
+  ```
+	uint32 size
+	string raw_extension
+  ```
 
 ## Extensions ID
 

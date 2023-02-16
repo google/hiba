@@ -15,6 +15,15 @@
 /* HIBA extensions magic header. */
 #define HIBA_MAGIC 0x48494241
 
+/* Base64 encoded HIBA extensions magic header.
+ * Result of encoding the HIBA_MAGIC to base64. Marks the begining of a base64
+ * encoded extension. */
+#define HIBA_B64_MAGIC  0x53456c43
+
+/* Multi HIBA extension magic marker.
+ * Used to flag that the extension contains multiple raw HIBA grants. */
+#define HIBA_MULTI_EXTS 0x4d554c54
+
 /* HIBA extension types. */
 #define HIBA_IDENTITY_EXT 'i'
 #define HIBA_GRANT_EXT 'g'
@@ -51,15 +60,17 @@ void hibaext_free(struct hibaext *ext);
  * The sshbuf will be consumed. */
 int hibaext_decode(struct hibaext *ext, struct sshbuf *blob);
 
-/* Encode a HIBA extension into a serialized blob to be included in a
+/* Encode one or more HIBA extensions into a serialized blob to be included in a
  * certificate (either raw or base64 encoded).
- * blob must be already allocated, and will not be reseti automatically.
+ * blob must be already allocated, and will be reset.
+ * It is invalid to request encoding of more than 1 identity extension, since a
+ * host cannot expose multiple identities.
  *
- * The default hibaext_encode points to the base64 version for backward
- * compatibility. */
-#define hibaext_encode(ext, blob) hibaext_encode_b64(ext, blob)
-int hibaext_encode_raw(const struct hibaext *ext, struct sshbuf *blob);
-int hibaext_encode_b64(const struct hibaext *ext, struct sshbuf *blob);
+ * The default hibaext_encode points to the base64 version, single
+ * extension for backward compatibility. */
+int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob);
+int hibaext_encode_raw(const struct hibaext **ext, int count, struct sshbuf *blob);
+int hibaext_encode_b64(const struct hibaext **ext, int count, struct sshbuf *blob);
 
 /* Sanity check a HIBA extension.
  * This verifies the following
