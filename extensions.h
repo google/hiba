@@ -66,11 +66,11 @@ int hibaext_decode(struct hibaext *ext, struct sshbuf *blob);
  * It is invalid to request encoding of more than 1 identity extension, since a
  * host cannot expose multiple identities.
  *
- * The default hibaext_encode points to the base64 version, single
+ * The default hibaext_encode points to the base64 version, uncompressed single
  * extension for backward compatibility. */
 int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob);
-int hibaext_encode_raw(const struct hibaext **ext, int count, struct sshbuf *blob);
-int hibaext_encode_b64(const struct hibaext **ext, int count, struct sshbuf *blob);
+int hibaext_encode_raw(const struct hibaext **ext, int count, int compress, struct sshbuf *blob);
+int hibaext_encode_b64(const struct hibaext **ext, int count, int compress, struct sshbuf *blob);
 
 /* Sanity check a HIBA extension.
  * This verifies the following

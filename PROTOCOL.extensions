@@ -75,6 +75,13 @@ two following methods:
 	string raw_extension
   ```
 
+## Support for compression
+
+Optionally, the value of the OpenSSH certificate extension can be compressed
+using zlib in order to minimize the size of the resulting certificate. This
+allows to accomodate for hardware security keys with limited storage size or
+even embedded systems.
+
 ## Extensions ID
 
 The HIBA extensions are identified by the following IDs:
