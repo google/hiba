@@ -104,7 +104,7 @@ encode_ext(const char *file, int type, int argc, char **argv) {
 	}
 
 	buf = sshbuf_new();
-	if ((ret = hibaext_encode(ext, buf)) < 0)
+	if ((ret = hibaext_encode_b64(ext, buf)) < 0)
 		fatal("encode_ext: failed to encode hiba grant extension: %s", hiba_err(ret));
 
 	if ((ret = sshbuf_write_file(file, buf)) < 0)

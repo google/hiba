@@ -128,12 +128,11 @@ err:
 }
 
 int
-hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
+hibaext_encode_raw(const struct hibaext *ext, struct sshbuf *blob) {
 	int ret;
 	u_int32_t count = 0;
 	u_int32_t sz = 0;
 	const struct pair *pair;
-	struct sshbuf *d;
 
 	if (blob == NULL || ext == NULL)
 		return HIBA_BAD_PARAMS;
@@ -149,63 +148,76 @@ hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
 		++count;
 	}
 
-	d = sshbuf_new();
-	if ((ret = sshbuf_allocate(d, sizeof(u_int32_t) + sizeof(struct hibaext) + sz)) < 0) {
-		debug3("hibaext_encode: sshbuf_allocate returned %d: %s", ret, ssh_err(ret));
+	if ((ret = sshbuf_allocate(blob, sizeof(u_int32_t) + sizeof(struct hibaext) + sz)) < 0) {
+		debug3("hibaext_encode_raw: sshbuf_allocate returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 
 	/* Construct the sshbuf. */
-	debug3("hibaext_encode: encoding header");
-	if ((ret = sshbuf_put_u32(d, HIBA_MAGIC)) != 0) {
-		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+	debug3("hibaext_encode_raw: encoding header");
+	if ((ret = sshbuf_put_u32(blob, HIBA_MAGIC)) != 0) {
+		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
-	if ((ret = sshbuf_put_u32(d, ext->type)) != 0) {
-		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+	if ((ret = sshbuf_put_u32(blob, ext->type)) != 0) {
+		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
-	if ((ret = sshbuf_put_u32(d, ext->version)) != 0) {
-		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+	if ((ret = sshbuf_put_u32(blob, ext->version)) != 0) {
+		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
-	if ((ret = sshbuf_put_u32(d, ext->min_version)) != 0) {
-		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+	if ((ret = sshbuf_put_u32(blob, ext->min_version)) != 0) {
+		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
-	if ((ret = sshbuf_put_u32(d, count)) != 0) {
-		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+	if ((ret = sshbuf_put_u32(blob, count)) != 0) {
+		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 
-	debug3("hibaext_encode: encoding %d pairs", ext->npairs);
+	debug3("hibaext_encode_raw: encoding %d pairs", ext->npairs);
 	count = 0;
 	pair = &ext->pairs;
 	while(pair->next != NULL && count < ext->npairs) {
 		pair = pair->next;
-		if ((ret = sshbuf_put_cstring(d, pair->key)) != 0) {
-			debug3("hibaext_encode: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
+		if ((ret = sshbuf_put_cstring(blob, pair->key)) != 0) {
+			debug3("hibaext_encode_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
 			ret = HIBA_INTERNAL_ERROR;
 			goto err;
 		}
-		if ((ret = sshbuf_put_cstring(d, pair->val)) != 0) {
-			debug3("hibaext_encode: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
+		if ((ret = sshbuf_put_cstring(blob, pair->val)) != 0) {
+			debug3("hibaext_encode_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
 			ret = HIBA_INTERNAL_ERROR;
 			goto err;
 		}
 		++count;
 	}
 
-	debug3("hibaext_encode: base64 encode");
+err:
+	return ret;
+}
+
+int
+hibaext_encode_b64(const struct hibaext *ext, struct sshbuf *blob) {
+	int ret;
+	struct sshbuf *d = sshbuf_new();
+
+	if ((ret = hibaext_encode_raw(ext, d)) < 0) {
+		debug3("hibaext_encode_b64: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
+		ret = HIBA_INTERNAL_ERROR;
+                goto err;
+	}
 	if ((ret = sshbuf_dtob64(d, blob, 0)) < 0) {
-		debug3("hibaext_decode: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
-	ret = HIBA_INTERNAL_ERROR;
+		debug3("hibaext_encode_b64: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
+		ret = HIBA_INTERNAL_ERROR;
+                goto err;
 	}
 
 err:
