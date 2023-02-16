@@ -37,6 +37,8 @@ const char *hiba_err(int err) {
 		return "used of reserved key for identity extension";
 	case HIBA_GRANT_BADOPTIONS:
 		return "grant options syntax error";
+	case HIBA_ONE_IDENTITY_ONLY:
+		return "invalid combination of multiple HIBA identities";
 	case HIBA_PAIR_EXISTS:
 		return "the key for identity extension must be unique";
 	case HIBA_CHECK_NOKEY:

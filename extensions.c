@@ -127,8 +127,8 @@ err:
 	return ret;
 }
 
-int
-hibaext_encode_raw(const struct hibaext *ext, struct sshbuf *blob) {
+static int
+hibaext_encode_one_raw(const struct hibaext *ext, struct sshbuf *blob) {
 	int ret;
 	u_int32_t count = 0;
 	u_int32_t sz = 0;
@@ -149,51 +149,51 @@ hibaext_encode_raw(const struct hibaext *ext, struct sshbuf *blob) {
 	}
 
 	if ((ret = sshbuf_allocate(blob, sizeof(u_int32_t) + sizeof(struct hibaext) + sz)) < 0) {
-		debug3("hibaext_encode_raw: sshbuf_allocate returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_allocate returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 
 	/* Construct the sshbuf. */
-	debug3("hibaext_encode_raw: encoding header");
+	debug3("hibaext_encode_one_raw: encoding header");
 	if ((ret = sshbuf_put_u32(blob, HIBA_MAGIC)) != 0) {
-		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 	if ((ret = sshbuf_put_u32(blob, ext->type)) != 0) {
-		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 	if ((ret = sshbuf_put_u32(blob, ext->version)) != 0) {
-		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 	if ((ret = sshbuf_put_u32(blob, ext->min_version)) != 0) {
-		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 	if ((ret = sshbuf_put_u32(blob, count)) != 0) {
-		debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
 		goto err;
 	}
 
-	debug3("hibaext_encode_raw: encoding %d pairs", ext->npairs);
+	debug3("hibaext_encode_one_raw: encoding %d pairs", ext->npairs);
 	count = 0;
 	pair = &ext->pairs;
 	while(pair->next != NULL && count < ext->npairs) {
 		pair = pair->next;
 		if ((ret = sshbuf_put_cstring(blob, pair->key)) != 0) {
-			debug3("hibaext_encode_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
+			debug3("hibaext_encode_one_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
 			ret = HIBA_INTERNAL_ERROR;
 			goto err;
 		}
 		if ((ret = sshbuf_put_cstring(blob, pair->val)) != 0) {
-			debug3("hibaext_encode_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
+			debug3("hibaext_encode_one_raw: sshbuf_put_cstring returned %d: %s", ret, ssh_err(ret));
 			ret = HIBA_INTERNAL_ERROR;
 			goto err;
 		}
@@ -204,18 +204,18 @@ err:
 	return ret;
 }
 
-int
-hibaext_encode_b64(const struct hibaext *ext, struct sshbuf *blob) {
+static int
+hibaext_encode_one_b64(const struct hibaext *ext, struct sshbuf *blob) {
 	int ret;
 	struct sshbuf *d = sshbuf_new();
 
-	if ((ret = hibaext_encode_raw(ext, d)) < 0) {
-		debug3("hibaext_encode_b64: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
+	if ((ret = hibaext_encode_one_raw(ext, d)) < 0) {
+		debug3("hibaext_encode_one_b64: sshbuf_dtob64 returned %d: %s", ret, hiba_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
                 goto err;
 	}
 	if ((ret = sshbuf_dtob64(d, blob, 0)) < 0) {
-		debug3("hibaext_encode_b64: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
+		debug3("hibaext_encode_one_b64: sshbuf_dtob64 returned %d: %s", ret, ssh_err(ret));
 		ret = HIBA_INTERNAL_ERROR;
                 goto err;
 	}
@@ -223,6 +223,97 @@ hibaext_encode_b64(const struct hibaext *ext, struct sshbuf *blob) {
 err:
 	sshbuf_free(d);
 	return ret;
+}
+
+int
+hibaext_encode_raw(const struct hibaext **ext, int count, struct sshbuf *d) {
+	int ret = 0;
+	struct sshbuf *one = NULL;
+
+	sshbuf_reset(d);
+
+	if (ext == NULL || count == 0)
+		return HIBA_BAD_PARAMS;
+	if (blob == NULL)
+		return HIBA_BAD_PARAMS;
+	if (ext[0]->type == HIBA_IDENTITY_EXT && count > 1)
+		return HIBA_ONE_IDENTITY_ONLY;
+
+	/* Single and multiple raw extensions are encoded differently.
+	 * See PROTOCOL.extensions. */
+	if (count == 1) {
+		if ((ret = hibaext_encode_one_raw(ext[0], d)) < 0) {
+			debug3("hibaext_encode_raw: hibaext_encode_one_raw returned %d: %s", ret, hiba_err(ret));
+			goto err;
+		}
+	} else {
+		int i;
+
+		debug2("hibaext_encode_raw: encode single extension");
+		one = sshbuf_new();
+		if ((ret = sshbuf_put_u32(d, HIBA_MULTI_EXTS)) < 0) {
+			debug3("hibaext_encode_raw: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
+			goto err;
+		}
+		for (i = 0; i < count; ++i) {
+			sshbuf_reset(one);
+			debug2("hibaext_encode_raw: encode extension %d/%d", i+1, count);
+			if ((ret = hibaext_encode_one_raw(ext[i], one)) < 0) {
+				debug3("hibaext_encode_raw: hibaext_encode_one_raw returned %d: %s", ret, hiba_err(ret));
+				goto err;
+			}
+			if ((ret = sshbuf_put_stringb(d, one)) < 0) {
+				debug3("hibaext_encode_raw: sshbuf_put_stringb returned %d: %s", ret, ssh_err(ret));
+				goto err;
+			}
+		}
+	}
+
+err:
+	sshbuf_free(one);
+	return ret;
+}
+
+int
+hibaext_encode_b64(const struct hibaext **ext, int count, struct sshbuf *blob) {
+	int i;
+	int ret = 0;
+
+	sshbuf_reset(d);
+
+	if (ext == NULL || count == 0)
+		return HIBA_BAD_PARAMS;
+	if (blob == NULL)
+		return HIBA_BAD_PARAMS;
+	if (ext[0]->type == HIBA_IDENTITY_EXT && count > 1)
+		return HIBA_ONE_IDENTITY_ONLY;
+
+	/* Base64 extensions are a simple concatenation of single base64 encode
+	 * HIBA extensions separated by commas. See PROTOCOL.extensions. */
+	for (i = 0; i < count-1; ++i) {
+		debug2("hibaext_encode_b64: encode extension %d/%d", i+1, count);
+		if ((ret = hibaext_encode_one_b64(ext[i], d)) < 0) {
+			debug3("hibaext_encode_b64: hibaext_encode_one_b64 returned %d: %s", ret, hiba_err(ret));
+			goto err;
+		}
+		if ((ret = sshbuf_put_u8(d, ',')) < 0) {
+			debug3("hibaext_encode_b64: sshbuf_put_u8 returned %d: %s", ret, ssh_err(ret));
+			goto err;
+		}
+	}
+	debug2("hibaext_encode_b64: encode extension %d/%d", i+1, count);
+	if ((ret = hibaext_encode_one_b64(ext[i], d)) < 0) {
+		debug3("hibaext_encode_b64: last hibaext_encode_one_b64 returned %d: %s", ret, hiba_err(ret));
+		goto err;
+	}
+
+err:
+	return ret;
+}
+
+int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
+	const struct hibaext *exts[1] = {ext};
+	return hibaext_encode_b64(exts, 1, 0, blob);
 }
 
 struct hibaext*

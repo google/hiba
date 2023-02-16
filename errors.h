@@ -29,6 +29,7 @@
 #define HIBA_PAIR_EXISTS -23
 #define HIBA_UNEXPECTED_KEY -24
 #define HIBA_GRANT_BADOPTIONS -25
+#define HIBA_ONE_IDENTITY_ONLY -26
 
 /* Check results. */
 #define HIBA_CHECK_NOKEY -40

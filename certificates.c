@@ -9,6 +9,7 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "extensions.h"
 #include "certificates.h"
 #include "errors.h"
 #include "log.h"
@@ -78,53 +79,95 @@ hibacert_from_ext(struct hibacert *cert, struct hibaext *ext,
 	return HIBA_OK;
 }
 
+static int
+hibacert_load_one(struct hibacert *cert, const unsigned char *data, size_t len) {
+	int ret;
+	struct sshbuf *blob = sshbuf_new();
+	sshbuf_put(blob, data, len);
+	cert->exts = xreallocarray(cert->exts, cert->nexts + 1, sizeof(struct hibaext*));
+	cert->nexts++;
+	cert->exts[cert->nexts - 1] = hibaext_new();
+	ret = hibaext_decode(cert->exts[cert->nexts - 1], blob);
+	sshbuf_free(blob);
+	return ret;
+}
+
 int
-hibacert_load_extensions(struct hibacert *cert, struct sshbuf *extensions) {
-	int pos = 0;
+hibacert_load_extensions(struct hibacert *cert, struct sshbuf *blob) {
 	int ret = 0;
 	size_t i = 0;
-	size_t len = 0;
 	u_int32_t magic;
-	const char *data = NULL;
+	const unsigned char *data = sshbuf_ptr(blob);
+	size_t len = sshbuf_len(blob);
 
-	if ((ret = sshbuf_peek_u32(extensions, 0, &magic)) < 0) {
-                debug3("hibacert_load_extensions: sshbuf_peek_u32 returned %d: %s", ret, ssh_err(ret));
-		return HIBA_INTERNAL_ERROR;
-        }
-	if ((ret = sshbuf_get_string_direct(extensions, (const unsigned char**)&data, &len)) < 0) {
-		debug3("hibacert_load_extensions: sshbuf_get_string_direct returned %d: %s", ret, ssh_err(ret));
-		return HIBA_INTERNAL_ERROR;
+	if (data == NULL) {
+		ret = HIBA_INVALID_EXT;
+		goto err;
 	}
-	debug3("hibacert_load_extensions: total extension len %zu", len);
 
-	while (i < len) {
-		int extension_len = 0;
-		if ((i == 0) && (magic == HIBA_MAGIC)) {
-			/* there is a chance we have a single extension in
-			 * the raw serialized format. */
-			extension_len = len;
-			i = len - 1;
-		} else if (data[i] == ',') {
-			extension_len = i - pos;
-		} else if (i == len - 1) {
-			extension_len = len - pos;
+	magic = PEEK_U32(data);
+	debug3("hibacert_load_extensions: total extension len %zu, magic=0x%08x", len, magic);
+
+	if (magic == HIBA_B64_MAGIC) {
+		/* Base64 format.
+		 * Either one or multiple comma separated extensions. */
+		debug3("hibacert_load_extensions: found base64 extension(s)");
+		int pos = 0;
+		while (i < len) {
+			int extension_len = 0;
+
+			/* If we find a comma or end of buffer, we should have
+			 * a full extension to parse. */
+			if (data[i] == ',') {
+				extension_len = i - pos;
+			} else if (i == len - 1) {
+				extension_len = len - pos;
+			}
+
+			if (extension_len > 0) {
+				debug3("hibacert_load_extensions: found extension [%d, %zu]: %.*s", pos, i, extension_len, data+pos);
+				if ((ret = hibacert_load_one(cert, data+pos, extension_len)) < 0) {
+					debug3("hibacert_load_extensions: hibacert_load_one returned %d: %s", ret, ssh_err(ret));
+					break;
+				}
+				pos = i+1;
+			}
+			++i;
 		}
-		if (extension_len > 0) {
-			struct sshbuf *blob = sshbuf_new();
-			debug3("hibacert_load_extensions: found extension [%d, %zu]: %.*s", pos, i, extension_len, data+pos);
-			sshbuf_put(blob, data+pos, extension_len);
-			cert->exts = xreallocarray(cert->exts, cert->nexts + 1, sizeof(struct hibaext*));
-			cert->nexts++;
-			cert->exts[cert->nexts - 1] = hibaext_new();
-			ret = hibaext_decode(cert->exts[cert->nexts - 1], blob);
-			sshbuf_free(blob);
-			if (ret < 0) {
+	} else if (magic == HIBA_MAGIC) {
+		/* One extension using raw format. */
+		debug3("hibacert_load_extensions: found 1 raw extension");
+		if ((ret = hibacert_load_one(cert, data, len)) < 0) {
+			debug3("hibacert_load_extensions: hibacert_load_one returned %d: %s", ret, ssh_err(ret));
+		}
+	} else if (magic == HIBA_MULTI_EXTS) {
+		/* Consume magic MULT header. */
+		struct sshbuf *exts = sshbuf_from(data+4, len-4);
+
+		debug3("hibacert_load_extensions: found raw extension(s)");
+
+		/* Multiple raw extensions starting with the size of the
+		 * extension. */
+		while (sshbuf_len(exts) > 0) {
+			size_t extension_len;
+			const unsigned char *extension_data;
+
+			if ((ret = sshbuf_get_string_direct(exts, &extension_data, &extension_len)) < 0) {
+		                debug3("hibacert_load_extensions: sshbuf_get_string returned %d: %s", ret, ssh_err(ret));
+				ret = HIBA_INTERNAL_ERROR;
+				break;
+		        }
+			debug3("hibacert_load_extensions: found 1 extension len: %zu", extension_len);
+			if ((ret = hibacert_load_one(cert, extension_data, extension_len)) < 0) {
+				debug3("hibacert_load_extensions: hibacert_load_one returned %d: %s", ret, ssh_err(ret));
 				break;
 			}
-			pos = i+1;
 		}
-		++i;
-	};
+		sshbuf_free(exts);
+	}
+
+err:
+	sshbuf_free(extensions);
 
 	return ret;
 }
