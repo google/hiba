@@ -8,7 +8,24 @@ dest="${DEST:-$(mktemp -d)}"
 log="${LOG:-/tmp/hiba-regression-test.log}"
 cleanup="${CLEANUP:-1}"
 
+tmpdir="$dest/tmp"
+mkdir -p "$tmpdir"
+
 date > "$log"
+
+# Define extension formats
+SINGLERAW=1
+SINGLERAWZ=2
+SINGLEB64=3
+SINGLEB64Z=4
+MULTIRAW=5
+MULTIRAWZ=6
+MULTIB64=7
+MULTIB64Z=8
+
+if grep -q -e "^#define WITH_EXTENSION_COMPRESSION 1$" ../config.h; then
+	WITH_EXTENSION_COMPRESSION=1
+fi
 
 output() {
 	tee -a "$log" >&2

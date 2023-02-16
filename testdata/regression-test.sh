@@ -141,6 +141,80 @@ EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
 #####
 
+START_TEST "hiba-gen: grant format: single raw"
+EXPECTED="certificate 'test' (1 principal) contains 1 HIBA grant
+ principal: 'foobar'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '1'"
+VERBOSE='' RUN ../generate-test-certs "$SINGLERAW" "$tmpdir/user-singleraw-cert.pub"
+GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-singleraw-cert.pub")
+EXPECT_EQ "$EXPECTED" "$GOT"
+if [[ -n "$WITH_EXTENSION_COMPRESSION" ]]; then
+	VERBOSE='' RUN ../generate-test-certs "$SINGLERAWZ" "$tmpdir/user-singlerawz-cert.pub"
+	GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-singlerawz-cert.pub")
+	EXPECT_EQ "$EXPECTED" "$GOT"
+fi
+SUCCESS
+#####
+
+START_TEST "hiba-gen: grant format: single base64"
+EXPECTED="certificate 'test' (1 principal) contains 1 HIBA grant
+ principal: 'foobar'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '1'"
+VERBOSE='' RUN ../generate-test-certs "$SINGLEB64" "$tmpdir/user-singleb64-cert.pub"
+GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-singleb64-cert.pub")
+EXPECT_EQ "$EXPECTED" "$GOT"
+if [[ -n "$WITH_EXTENSION_COMPRESSION" ]]; then
+	VERBOSE='' RUN ../generate-test-certs "$SINGLEB64Z" "$tmpdir/user-singleb64z-cert.pub"
+	GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-singleb64z-cert.pub")
+	EXPECT_EQ "$EXPECTED" "$GOT"
+fi
+SUCCESS
+#####
+
+START_TEST "hiba-gen: grant format: multi raw"
+EXPECTED="certificate 'test' (1 principal) contains 2 HIBA grants
+ principal: 'foobar'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '1'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '2'"
+VERBOSE='' RUN ../generate-test-certs "$MULTIRAW" "$tmpdir/user-multiraw-cert.pub"
+GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-multiraw-cert.pub")
+EXPECT_EQ "$EXPECTED" "$GOT"
+if [[ -n "$WITH_EXTENSION_COMPRESSION" ]]; then
+	VERBOSE='' RUN ../generate-test-certs "$MULTIRAWZ" "$tmpdir/user-multirawz-cert.pub"
+	GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-multirawz-cert.pub")
+	EXPECT_EQ "$EXPECTED" "$GOT"
+fi
+SUCCESS
+#####
+
+START_TEST "hiba-gen: grant format: multi base64"
+EXPECTED="certificate 'test' (1 principal) contains 2 HIBA grants
+ principal: 'foobar'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '1'
+grant@hibassh.dev (v1):
+ [0] domain = 'hibassh.dev'
+ [1] id = '2'"
+VERBOSE='' RUN ../generate-test-certs "$MULTIB64" "$tmpdir/user-multib64-cert.pub"
+GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-multib64-cert.pub")
+EXPECT_EQ "$EXPECTED" "$GOT"
+if [[ -n "$WITH_EXTENSION_COMPRESSION" ]]; then
+	VERBOSE='' RUN ../generate-test-certs "$MULTIB64Z" "$tmpdir/user-multib64z-cert.pub"
+	GOT=$(RUN ../hiba-gen -d -f "$tmpdir/user-multib64z-cert.pub")
+	EXPECT_EQ "$EXPECTED" "$GOT"
+fi
+SUCCESS
+#####
+
 START_TEST "hiba-ca.sh: sign host"
 RUN ../hiba-ca.sh -d "$dest" -s -h -I host1 -V +30d -H owner:user1 -- -P secret &>> "$log"
 RUN ../hiba-ca.sh -d "$dest" -s -h -I host2 -V +30d -H owner:user2 -- -P secret &>> "$log"
@@ -195,16 +269,6 @@ EXPECTED="certificate 'user1' (1 principal) contains 1 HIBA grant
 grant@hibassh.dev (v1):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN ../hiba-gen -d -f "$(cat $dest/users/user1-cert.pub)")
-EXPECT_EQ "$EXPECTED" "$GOT"
-SUCCESS
-#####
-
-START_TEST "hiba-gen: raw grants"
-EXPECTED="grant@hibassh.dev (v1):
- [0] domain = 'hibassh.dev'"
-RUN ../hiba-gen -f "$dest/policy/grants/base64" domain hibassh.dev &>> "$log"
-base64 -d "$dest/policy/grants/base64" > "$dest/policy/grants/raw"
-GOT=$(RUN ../hiba-gen -d -f "$dest/policy/grants/raw")
 EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
 #####
