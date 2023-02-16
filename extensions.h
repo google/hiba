@@ -52,8 +52,14 @@ void hibaext_free(struct hibaext *ext);
 int hibaext_decode(struct hibaext *ext, struct sshbuf *blob);
 
 /* Encode a HIBA extension into a serialized blob to be included in a
- * certificate. blob must be already allocated. */
-int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob);
+ * certificate (either raw or base64 encoded).
+ * blob must be already allocated, and will not be reseti automatically.
+ *
+ * The default hibaext_encode points to the base64 version for backward
+ * compatibility. */
+#define hibaext_encode(ext, blob) hibaext_encode_b64(ext, blob)
+int hibaext_encode_raw(const struct hibaext *ext, struct sshbuf *blob);
+int hibaext_encode_b64(const struct hibaext *ext, struct sshbuf *blob);
 
 /* Sanity check a HIBA extension.
  * This verifies the following
