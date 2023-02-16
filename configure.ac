@@ -229,6 +229,61 @@ AM_COND_IF(
 	], [],
 )
 
+# Checks for Zlib library
+AC_ARG_ENABLE(
+	[extension-compression], [AS_HELP_STRING(
+		[--enable-extension-compression], [enable extension compression support],
+	)], [zlib=$enableval], [zlib=yes])
+AM_CONDITIONAL([WANT_ZLIB], [test "x$zlib" = xyes])
+
+AC_ARG_WITH(
+	[zlibdir], [AS_HELP_STRING(
+		[--with-zlibdir=DIR], [path to source directory],
+	)], [zlibdir=$withval], [zlibdir=])
+AM_CONDITIONAL([CUSTOM_ZLIB], [test "x$zlibdir" != x])
+
+# If we want Zlib, we need to sources and libraries available
+AC_MSG_CHECKING(for compressed extensions support)
+AM_COND_IF(
+	[WANT_ZLIB], [
+		AC_DEFINE([WITH_EXTENSION_COMPRESSION], [1], [
+			Define to 1 if you have support for extension compression.
+		])
+		AC_MSG_RESULT(yes)
+		AM_COND_IF(
+			[CUSTOM_ZLIB], [
+				LIBS="$LIBS -lz"
+				CFLAGS="$CFLAGS -I$zlibdir"
+				LDFLAGS="$LDFLAGS -L$zlibdir"
+
+				AC_MSG_CHECKING(for zlib.h)
+				AC_COMPILE_IFELSE(
+					[AC_LANG_PROGRAM([#include "zlib.h"], [])], [
+						AC_MSG_RESULT([yes])
+					], [
+						AC_MSG_ERROR([missing from custom directory $zlibdir])])
+
+				AC_MSG_CHECKING(for library containing inflate)
+				AC_LINK_IFELSE(
+					[AC_LANG_CALL([], [inflate])], [
+						AC_MSG_RESULT(yes)
+					], [
+						AC_MSG_ERROR([no, make sure to compile it in $zlibdir])
+					])
+			], [
+				AC_CHECK_HEADER([zlib.h], , [
+					AC_MSG_ERROR([Missing zlib.h, please install it to sysroot or use --with-zlibdir=path]),
+				])
+				AC_SEARCH_LIBS(
+					[inflate], [z], [], [
+						AC_MSG_ERROR([unable to find a working zlib library])
+					])
+			],
+		)
+	], [
+		AC_MSG_RESULT(no)
+	])
+
 # Checks for OpenBSD compat library (part of OpenSSH).
 AC_SEARCH_LIBS([ssh_get_progname], [openbsd-compat], [], [
 	AC_MSG_ERROR([/!\ Make sure to configure and build OpenSSH before HIBA.])],

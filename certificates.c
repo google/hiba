@@ -9,6 +9,12 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "config.h"
+
+#ifdef WITH_EXTENSION_COMPRESSION
+#include <zlib.h>
+#endif /* WITH_EXTENSION_COMPRESSION */
+
 #include "extensions.h"
 #include "certificates.h"
 #include "errors.h"
@@ -92,13 +98,63 @@ hibacert_load_one(struct hibacert *cert, const unsigned char *data, size_t len) 
 	return ret;
 }
 
+static struct sshbuf*
+hibacert_maybe_inflate(struct sshbuf *extensions) {
+	int ret;
+	struct sshbuf *decomp = NULL;
+#ifdef WITH_EXTENSION_COMPRESSION
+	size_t len = 0;
+	unsigned char *data = NULL;
+	z_stream stream;
+
+	memset(&stream, 0, sizeof(stream));
+
+	if ((ret = sshbuf_peek_string_direct(extensions, (const unsigned char**)&data, &len)) < 0) {
+		debug3("hibacert_maybe_inflate: sshbuf_peek_string_direct returned %d: %s", ret, ssh_err(ret));
+		return NULL;
+	}
+
+	inflateInit(&stream);
+	stream.next_in = data;
+	stream.avail_in = len;
+
+	while (ret != Z_STREAM_END) {
+		unsigned char buf[512];
+
+		stream.next_out = buf;
+		stream.avail_out = sizeof(buf);
+		ret = inflate(&stream, Z_SYNC_FLUSH);
+		if (ret != Z_OK && ret != Z_STREAM_END) {
+			break;
+		}
+		if (decomp == NULL) {
+			decomp = sshbuf_new();
+		}
+		sshbuf_put(decomp, buf, stream.total_out);
+	}
+	inflateEnd(&stream);
+
+	if (ret == Z_STREAM_END) {
+		debug2("hibacert_maybe_inflate: using decompressed extension %ld -> %ld bytes", len, sshbuf_len(decomp));
+		sshbuf_consume(extensions, len);
+		return decomp;
+	}
+#endif /* WITH_EXTENSION_COMPRESSION */
+	if ((ret = sshbuf_froms(extensions, &decomp)) < 0) {
+		debug3("hibacert_maybe_inflate: sshbuf_froms returned %d: %s", ret, ssh_err(ret));
+		decomp = NULL;
+	}
+	return decomp;
+}
+
 int
 hibacert_load_extensions(struct hibacert *cert, struct sshbuf *blob) {
 	int ret = 0;
 	size_t i = 0;
 	u_int32_t magic;
-	const unsigned char *data = sshbuf_ptr(blob);
-	size_t len = sshbuf_len(blob);
+	struct sshbuf *extensions = hibacert_maybe_inflate(blob);
+	const unsigned char *data = sshbuf_ptr(extensions);
+	size_t len = sshbuf_len(extensions);
 
 	if (data == NULL) {
 		ret = HIBA_INVALID_EXT;
