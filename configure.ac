@@ -246,7 +246,7 @@ AC_OUTPUT
 
 # Print configuration summary
 echo ""
-echo "MIBA has been configure with the following options:"
+echo "HIBA has been configure with the following options:"
 echo ""
 echo "              Host: $host"
 echo "          Compiler: $CC"
