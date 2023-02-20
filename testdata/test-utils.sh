@@ -7,6 +7,7 @@
 dest="${DEST:-$(mktemp -d)}"
 log="${LOG:-/tmp/hiba-regression-test.log}"
 cleanup="${CLEANUP:-1}"
+run_under="${RUN_UNDER:-}"
 
 tmpdir="$dest/tmp"
 mkdir -p "$tmpdir"
@@ -35,8 +36,19 @@ RUN() {
 	CMD=$1
 	shift 1
 
-	echo "= Running $CMD $VERBOSE $@" >>$log
-	$CMD $VERBOSE "$@" 2>>$log | tee -a "$log"
+	echo "= Running $CMD $@" >>$log
+	$CMD "$@" 2>>$log | tee -a "$log"
+	exit_code=${PIPESTATUS[0]}
+	echo "= Exit code $exit_code" >>$log
+	return $exit_code
+}
+
+RUN_T() {
+	CMD=$1
+	shift 1
+
+	echo "= Running $run_under $CMD $VERBOSE $@" >>$log
+	$run_under $CMD $VERBOSE "$@" 2>>$log | tee -a "$log"
 	exit_code=${PIPESTATUS[0]}
 	echo "= Exit code $exit_code" >>$log
 	return $exit_code

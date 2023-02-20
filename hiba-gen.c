@@ -125,7 +125,7 @@ main(int argc, char **argv) {
 	int type = HIBA_GRANT_EXT;
 	char *file = NULL;
 
-	char *__progname = ssh_get_progname(argv[0]);
+	char *__progname;
 
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null. */
 	sanitise_stdfd();
