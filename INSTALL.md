@@ -144,3 +144,14 @@ provided. This script will:
 * Sign the certificates with extensions
 * Generate ssh client and server configs
 * Start 2 local sshd servers (simulating 2 different hosts)
+
+A set of regression tests is also provided in `testdata/regression-test.sh`. It
+supports wrapping all hiba-(chk|gen|grl) calls by setting the RUN_UNDER shell
+variable to the wrapping command itself. Example:
+
+```
+$ RUN_UNDER="valgrind --error-limit=no --trace-children=yes --show-leak-kinds=all --leak-check=full" testdata/regression-test.sh
+```
+
+Note: when using `RUN_UNDER`, make sure to configure HIBA with `--disable-shared`
+to avoid testing libtool's shell wrappers.
