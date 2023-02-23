@@ -12,26 +12,18 @@
 
 #include "sshbuf.h"
 
-/*
- * HIBA extensions magic header
- */
+/* HIBA extensions magic header. */
 #define HIBA_MAGIC 0x48494241
 
-/*
- * HIBA extension types
- */
+/* HIBA extension types. */
 #define HIBA_IDENTITY_EXT 'i'
 #define HIBA_GRANT_EXT 'g'
 
-/*
- * HIBA Extensions IDs
- */
+/* HIBA Extensions IDs. */
 #define HIBA_IDENTITY_ID "identity@hibassh.dev"
 #define HIBA_GRANT_ID "grant@hibassh.dev"
 
-/*
- * HIBA pre defined options
- */
+/* HIBA pre defined options. */
 #define HIBA_KEY_DOMAIN "domain"
 #define HIBA_KEY_ROLE "role"
 #define HIBA_KEY_VALIDITY "validity"
@@ -115,4 +107,4 @@ int hibaext_add_pair(struct hibaext *ext, const char *key, const char *value);
 int hibaext_update_pair(struct hibaext *ext, const char *key,
                         const char *value);
 
-#endif // _EXTENSIONS_H
+#endif /* _EXTENSIONS_H */

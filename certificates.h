@@ -43,6 +43,6 @@ int hibacert_hibaexts(const struct hibacert *cert, struct hibaext ***exts,
 int hibacert_from_ext(struct hibacert *cert, struct hibaext *ext,
                       const char *principal, u_int64_t validity,
                       u_int64_t serial);
-#endif  // HIBA_INTERNAL
+#endif  /* HIBA_INTERNAL */
 
-#endif  // _CERTIFICATES_H
+#endif  /* _CERTIFICATES_H */

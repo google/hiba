@@ -140,7 +140,7 @@ hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
 	if ((ret = hibaext_sanity_check(ext)) != 0)
 		return ret;
 
-	// Pre-calculate size
+	/* Pre-calculate size. */
 	pair = &ext->pairs;
 	while(pair->next != NULL && count < ext->npairs) {
 		pair = pair->next;
@@ -156,7 +156,7 @@ hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
 		goto err;
 	}
 
-	// Construct the sshbuf
+	/* Construct the sshbuf. */
 	debug3("hibaext_encode: encoding header");
 	if ((ret = sshbuf_put_u32(d, HIBA_MAGIC)) != 0) {
 		debug3("hibaext_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
@@ -255,7 +255,7 @@ hibaext_free(struct hibaext *ext) {
 	free(ext);
 }
 
-inline u_int32_t
+__inline__ u_int32_t
 hibaext_type(const struct hibaext *ext) {
 	if (ext == NULL)
 		return HIBA_UNKNOWN_EXT;

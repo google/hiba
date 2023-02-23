@@ -34,4 +34,4 @@ void open_grl(const char *file, unsigned char **ptr, u_int64_t *sz, int *mmapped
 /* Release resources allocated by open_grl. */
 void close_grl(unsigned char *ptr, u_int64_t sz, int mmapped);
 
-#endif  // _UTIL_H
+#endif  /* _UTIL_H */

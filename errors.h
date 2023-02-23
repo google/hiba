@@ -12,7 +12,7 @@
 
 #define HIBA_OK 0
 
-// Generic error codes
+/* Generic error codes. */
 #define HIBA_INVALID_EXT -1
 #define HIBA_BAD_VERSION -2
 #define HIBA_BAD_PARAMS -3
@@ -22,7 +22,7 @@
 #define HIBA_INTERNAL_ERROR -7
 #define HIBA_INVALID_GRL -8
 
-// Extensions sanity checks diagnostics
+/* Extensions sanity checks diagnostics. */
 #define HIBA_EXT_NODOMAIN -20
 #define HIBA_GRANT_BADVALIDITY -21
 #define HIBA_PAIRS_TOOMANY -22
@@ -30,7 +30,7 @@
 #define HIBA_UNEXPECTED_KEY -24
 #define HIBA_GRANT_BADOPTIONS -25
 
-// Check results
+/* Check results. */
 #define HIBA_CHECK_NOKEY -40
 #define HIBA_CHECK_BADVERSION -41
 #define HIBA_CHECK_EXPIRED -42
@@ -44,4 +44,4 @@
 /* Return human readable error messages. */
 const char *hiba_err(int err);
 
-#endif  // _ERRORS_H
+#endif  /* _ERRORS_H */

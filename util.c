@@ -83,7 +83,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 		}
 
 		if (ret == 0) {
-			// Maybe a certificate
+			/* Maybe a certificate. */
 			struct hibacert *cert;
 
 			if (!sshkey_is_cert(key))
@@ -94,7 +94,7 @@ decode_file(char *file, struct hibacert **outcert, struct hibaext **outext) {
 				fatal("decode_file: failed to decode hiba extension from cert: %s", hiba_err(ret));
 			*outcert = cert;
 		} else {
-			// Maybe a HIBA extension
+			/* Maybe a HIBA extension. */
 			struct sshbuf *buf = sshbuf_from(cp, linesize);
 			struct hibaext *ext = NULL;
 

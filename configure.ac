@@ -59,7 +59,7 @@ for f in -fpie -fPIE -fpic -fPIC; do
 	CFLAGS="$save_CFLAGS"
 done
 
-for f in -Wall -Wextra -Werror -Wno-attributes -Wno-unused-parameter -Wformat-security -Wuninitialized; do
+for f in -ansi -Wall -Wextra -Werror -Wno-attributes -Wno-unused-parameter -Wformat-security -Wuninitialized; do
 	AC_MSG_CHECKING(whether $CC supports $f options)
 	CFLAGS="$CFLAGS $extra_CFLAGS $f"
 	AC_COMPILE_IFELSE(
@@ -70,6 +70,16 @@ for f in -Wall -Wextra -Werror -Wno-attributes -Wno-unused-parameter -Wformat-se
 	)
 done
 CFLAGS="$save_CFLAGS"
+
+AC_MSG_CHECKING(whether preprocessor supports _DEFAULT_SOURCE)
+CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_DEFAULT_SOURCE"
+AC_COMPILE_IFELSE(
+	[AC_LANG_PROGRAM()], [
+		extra_CPPFLAGS="$extra_CPPFLAGS -D_DEFAULT_SOURCE"
+		AC_MSG_RESULT([yes])
+	], [AC_MSG_ERROR([no])],
+)
+CPPFLAGS="$save_CPPFLAGS"
 
 AC_MSG_CHECKING(whether preprocessor supports _FORTIFY_SOURCE)
 CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_FORTIFY_SOURCE=2"
@@ -232,7 +242,7 @@ AC_SUBST([extra_LIBS], [$LIBS])
 LIBS="$save_LIBS"
 
 # Checks for header files.
-AC_CHECK_HEADERS([inttypes.h limits.h stdint.h stdlib.h string.h unistd.h])
+AC_CHECK_HEADERS([inttypes.h limits.h stdint.h stdlib.h string.h sys/types.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE

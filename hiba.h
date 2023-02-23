@@ -10,7 +10,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif  // __cplusplus
+#endif  /* __cplusplus */
 
 #include "certificates.h"
 #include "checks.h"
@@ -20,6 +20,6 @@ extern "C" {
 
 #ifdef __cplusplus
 }
-#endif  // __cplusplus
+#endif  /* __cplusplus */
 
-#endif  // _HIBA_H
+#endif  /* _HIBA_H */

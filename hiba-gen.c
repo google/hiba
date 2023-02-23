@@ -127,7 +127,7 @@ main(int argc, char **argv) {
 
 	char *__progname = ssh_get_progname(argv[0]);
 
-	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
+	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null. */
 	sanitise_stdfd();
 
 	if (argc <= 1)
