@@ -82,7 +82,7 @@ main(int argc, char **argv) {
 	struct hibaext *grant;
 	char *__progname = ssh_get_progname(argv[0]);
 
-	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
+	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null. */
 	sanitise_stdfd();
 
 	while ((opt = getopt(argc, argv, "vr:i:g:p:")) != -1) {
@@ -147,31 +147,32 @@ main(int argc, char **argv) {
 
 		if (host == NULL) {
 			host = hibacert_new();
-			// If we got a HIBA identity extension with no SSH
-			// certificate, we must emulate the certificate serial
-			// and issued time. We do this with the following
-			// values: hardcoded certificate serial (causes
-			// revocations to be all or nothing), and issued on the
-			// UNIX epoch.
+			/* If we got a HIBA identity extension with no SSH
+			 * certificate, we must emulate the certificate serial
+			 * and issued time. We do this with the following
+			 * values: hardcoded certificate serial (causes
+			 * revocations to be all or nothing), and issued on the
+			 * UNIX epoch. */
 			if ((ret = hibacert_from_ext(host, identity, principal, 0, HOST_DEFAULT_CERT_SERIAL)) < 0)
 				fatal("%s: creating host certificate from extension: %s", __progname, hiba_err(ret));
 			identity = NULL;
 		}
 		if (user == NULL) {
 			user = hibacert_new();
-			// If we got a HIBA grant extension with no SSH
-			// certificate, we must emulate the certificate serial
-			// and issued time. We do this with the following
-			// values: hardcoded certificate serial (causes
-			// revocations to be all or nothing), and issued now
-			// (causes validity to always pass).
+			/* If we got a HIBA grant extension with no SSH
+			 * certificate, we must emulate the certificate serial
+			 * and issued time. We do this with the following
+			 * values: hardcoded certificate serial (causes
+			 * revocations to be all or nothing), and issued now
+			 * (causes validity to always pass). */
 			if ((ret = hibacert_from_ext(user, grant, principal, time(NULL), USER_DEFAULT_CERT_SERIAL)) < 0)
 				fatal("%s: creating user certificate from extension: %s", __progname, hiba_err(ret));
 			grant = NULL;
 		}
 
 		if (grl_file != NULL) {
-			// If a GRL file was specified but the content is not found, we fail closed.
+			/* If a GRL file was specified but the content is not
+                         * found, we fail closed. */
 			if (grl_data == NULL) {
 				fatal("%s:  cannot read GRL file %s", __progname, grl_file);
 			}

@@ -83,6 +83,6 @@ u_int64_t hibagrl_serials_count(const struct hibagrl *grl);
 /* Dump the content of a GRL object into human readable format.
  * The serial parameter can be used to filter for one serial if not NULL. */
 int hibagrl_dump_content(const struct hibagrl *grl, u_int64_t *serial, FILE *f);
-#endif // HIBA_INTERNAL
+#endif /* HIBA_INTERNAL */
 
-#endif  // _REVOCATIONS_H
+#endif  /* _REVOCATIONS_H */

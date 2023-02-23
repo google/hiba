@@ -44,7 +44,7 @@ static void do_revoke(struct hibagrl *grl, u_int64_t *serial, char *file, int ar
 		fatal("do_revoke: missing grant IDs");
 	}
 
-	// perform revocations
+	/* perform revocations. */
 	for (i = 0; i < argc; ++i) {
 		char *err;
 		u_int64_t id = strtoul(argv[i], &err, 0);
@@ -53,7 +53,7 @@ static void do_revoke(struct hibagrl *grl, u_int64_t *serial, char *file, int ar
 		hibagrl_revoke_grant(grl, *serial, id, id);
 	}
 
-	// Write back
+	/* Write back. */
 	blob = sshbuf_new();
 	if ((ret = hibagrl_encode(grl, blob)) < 0) {
 		fatal("do_revoke: failed to serialize GRL: %s", hiba_err(ret));
@@ -77,7 +77,7 @@ static int do_test(struct hibagrl *grl, u_int64_t *serial, int argc, char **argv
 		fatal("do_test: missing grant IDs");
 	}
 
-	// Test
+	/* Test. */
 	for (i = 0; i < argc; ++i) {
 		int ret;
 		char *err;

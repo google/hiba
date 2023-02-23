@@ -20,13 +20,12 @@
 /* OpenSSH's sshkey_sign function depends on a sshsk_sign function provided by
  * the caller. HIBA doesn't use this symbols but it ends up implicitly imported
  * along with the sshkey_read function. To work around that and make the linker
- * happy, we declare a weak dummy sshsk_sign().
- */
+ * happy, we declare a weak dummy sshsk_sign(). */
 #ifndef __CYGWIN__
 int  __attribute__((weak))
-#else // __CYGWIN__
+#else /* __CYGWIN__ */
 int
-#endif // __CYGWIN__
+#endif /* __CYGWIN__ */
 sshsk_sign() { abort(); return 0; }
 
 struct hibacert {
@@ -62,8 +61,8 @@ hibacert_from_ext(struct hibacert *cert, struct hibaext *ext,
 	if (cert == NULL || ext == NULL)
 		return HIBA_BAD_PARAMS;
 
-	// Create a dummy SSH certificate to support standalone HIBA extensions.
-	// The KEY_RSA_CERT type is picked at random and doesn't matter.
+	/* Create a dummy SSH certificate to support standalone HIBA extensions.
+	 * The KEY_RSA_CERT type is picked at random and doesn't matter. */
 	cert->key = sshkey_new(KEY_RSA_CERT);
 	cert->key->cert->serial = serial;
 	cert->key->cert->valid_after = validity;
@@ -101,8 +100,8 @@ hibacert_load_extensions(struct hibacert *cert, struct sshbuf *extensions) {
 	while (i < len) {
 		int extension_len = 0;
 		if ((i == 0) && (magic == HIBA_MAGIC)) {
-			// there is a chance we have a single extension in
-			// the raw serialized format.
+			/* there is a chance we have a single extension in
+			 * the raw serialized format. */
 			extension_len = len;
 			i = len - 1;
 		} else if (data[i] == ',') {
@@ -148,7 +147,7 @@ hibacert_parse(struct hibacert *cert, struct sshkey *key) {
 	if ((extensions = sshbuf_fromb(cert->key->cert->extensions)) == NULL)
 		return HIBA_INTERNAL_ERROR;
 
-	// Look for HIBA extensions
+	/* Look for HIBA extensions. */
 	debug2("hibacert_parse: looking for HIBA extensions for cert type %d", cert->key->cert->type);
 	if (cert->key->cert->type == SSH2_CERT_TYPE_HOST) {
 		expected_hiba_ext = HIBA_IDENTITY_ID;

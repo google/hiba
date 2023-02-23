@@ -28,21 +28,21 @@
  * 2. run the checks against N certificates.
  * 3. delete he hibaenv. */
 struct hibaenv {
-	// Host
+	/* Host */
 	u_int64_t now;
 	char hostname[HOST_NAME_MAX];
 	const struct hibaext *identity;
 	const struct hibagrl *grl;
 
-	// Certificate
+	/* Certificate */
 	u_int64_t cert_issue_ts;
 	u_int64_t cert_serial;
 
-	// Grant
+	/* Grant */
 	u_int32_t nprincipals;
 	char **principals;
 
-	// Extension
+	/* Extension */
 	u_int32_t version;
 	u_int32_t min_version;
 };
@@ -54,13 +54,13 @@ hibachk_keycmp(const struct hibaext *identity, const char *key, const char *valu
 
 	debug2("hibachk_keycmp: testing %s = %s", key, value);
 
-	// grant key MUST also be available in identity.
+	/* grant key MUST also be available in identity. */
 	if (hibaext_value_for_key(identity, key, &must_match) < 0)
 		return HIBA_CHECK_NOKEY;
 
 	debug2("hibachk_keycmp: processing against %s", must_match);
 
-	// Compare must_match and value using globs
+	/* Compare must_match and value using globs. */
 	if (fnmatch(value, must_match, 0) == FNM_NOMATCH)
 		ret = HIBA_CHECK_DENIED;
 	free(must_match);
@@ -145,13 +145,13 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 
 	debug2("hibachk_authorize: performing sanity checks");
 
-	// Basic sanity hibachks
+	/* Basic sanity hibachks. */
 	if ((env == NULL) || (grant == NULL))
 		return HIBA_BAD_PARAMS;
 	if ((ret = hibaext_sanity_check(grant)) < 0)
 		return ret;
 
-	// Test versions compatibility
+	/* Test versions compatibility. */
 	debug2("hibachk_authorize: checking version");
 	if ((ret = hibaext_versions(grant, &version, &min_version)) < 0)
 		return ret;
@@ -162,13 +162,14 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 	if (version < env->min_version)
 		return HIBA_CHECK_BADVERSION;
 
-	// Test GRL
+	/* Test GRL. */
 	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, user_serial);
 	if (env->grl != NULL && (ret = hibagrl_check(env->grl, user_serial, idx)) < 0) {
 		return ret;
 	}
 
-	// Check key needing special handling: HIBA_KEY_VALIDITY, HIBA_KEY_ROLE.
+	/* Check key needing special handling: HIBA_KEY_VALIDITY,
+         * HIBA_KEY_ROLE. */
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		char *key;
 		char *value;
@@ -180,15 +181,15 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 			long v = strtol(value, NULL, 0);
 
 			expiration_set = 1;
-			// We look for the expiration that is most distant in
-			// the future.
+			/* We look for the expiration that is most distant in
+			 * the future. */
 			if (v > expiration)
 				expiration = v;
 		} else if ((strcmp(key, HIBA_KEY_ROLE) == 0) && (strcmp(value, HIBA_ROLE_PRINCIPALS) == 0)) {
-			// A grant using HIBA_ROLE_PRINCIPALS as role must be
-			// checked against all the principals declared in the
-			// certificate, on top of other roles declared in the
-			// grant.
+			/* A grant using HIBA_ROLE_PRINCIPALS as role must be
+			 * checked against all the principals declared in the
+			 * certificate, on top of other roles declared in the
+			 * grant. */
 			expand_self = 1;
 		}
 
@@ -196,13 +197,13 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		free(value);
 	}
 
-	// Test for expiration.
+	/* Test for expiration. */
 	if (expiration_set && ((env->cert_issue_ts + expiration) < env->now)) {
 		debug2("hibachk_authorize: expired");
 		return HIBA_CHECK_EXPIRED;
 	}
 
-	// Check for role HIBA_ROLE_PRINCIPALS expansion.
+	/* Check for role HIBA_ROLE_PRINCIPALS expansion. */
 	if (expand_self) {
 		int role_is_self = 0;
 		for (i = 0; i < env->nprincipals; ++i) {
@@ -217,7 +218,7 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		}
 	}
 
-	// The grant looks OK, we can run the policy authorization checks.
+	/* The grant looks OK, we can run the policy authorization checks. */
 	return hibachk_query(env->identity, grant, env->hostname, role);
 }
 
@@ -230,7 +231,7 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 	result = hibaext_new();
 	hibaext_init(result, HIBA_GRANT_EXT);
 
-	// Test all keys from the grant against the identity:
+	/* Test all keys from the grant against the identity: */
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		int skip = 0;
 		char *key;

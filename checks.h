@@ -45,4 +45,4 @@ struct hibaenv *hibaenv_from_host(const struct hibacert *host, const struct hiba
 /* Destructor for hibaenv. */
 void hibaenv_free(struct hibaenv *env);
 
-#endif  // _CHECKS_H
+#endif  /* _CHECKS_H */

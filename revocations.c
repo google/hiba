@@ -18,15 +18,15 @@
 #define HIBA_CURRENT_GRL_VERSION	0x1
 #define HIBA_MIN_SUPPORTED_GRL_VERSION	0x1
 
-// Stores a list of all the certificates with revoked grants.
-// This structure is meant to be mapped directly on top of a mmapped revocation
-// file on top of the serial list section (see PROTOCOL.grl).
+/* Stores a list of all the certificates with revoked grants.
+ * This structure is meant to be mapped directly on top of a mmapped revocation
+ * file on top of the serial list section (see PROTOCOL.grl). */
 struct serials {
 	u_int64_t serial;
 	u_int64_t offset;
 } __attribute__((packed));
 
-// Parsed list of revocations.
+/* Parsed list of revocations. */
 struct parsed_revocations {
 	u_int64_t serial;
 	u_int16_t size;
@@ -35,10 +35,10 @@ struct parsed_revocations {
 	struct parsed_revocations *next;
 };
 
-// In memory representation of the GRL.
-// The 'parsed' field is a linked list to revocations entries. The first
-// element of that list (if it exists) is the head and doesn't contain any
-// revocation information.
+/* In memory representation of the GRL.
+ * The 'parsed' field is a linked list to revocations entries. The first
+ * element of that list (if it exists) is the head and doesn't contain any
+ * revocation information. */
 struct hibagrl {
 	u_int32_t version;
 	u_int32_t min_version;
@@ -88,8 +88,8 @@ hibagrl_init(struct hibagrl *grl, const char *comment) {
 	grl->min_version = HIBA_MIN_SUPPORTED_GRL_VERSION;
 	grl->comment = strdup(comment);
 
-	// Allocate the head of the parsed linked list to show this is an
-	// editable GRL.
+	/* Allocate the head of the parsed linked list to show this is an
+	 * editable GRL. */
 	grl->parsed = calloc(1, sizeof(struct parsed_revocations));
 }
 
@@ -161,7 +161,7 @@ hibagrl_decode(struct hibagrl *grl, struct sshbuf *blob) {
 		return HIBA_INTERNAL_ERROR;
 	}
 
-	// Get the serials section
+	/* Get the serials section. */
 	if ((ret = sshbuf_get_u64(blob, &serials_section_size)) != 0) {
 		debug3("hibagrl_decode: sshbuf_get_u64 returned %d: %s", ret, ssh_err(ret));
 		return HIBA_INTERNAL_ERROR;
@@ -178,7 +178,7 @@ hibagrl_decode(struct hibagrl *grl, struct sshbuf *blob) {
 		return HIBA_INTERNAL_ERROR;
 	}
 
-	// Get the bitmaps section
+	/* Get the bitmaps section. */
 	if ((ret = sshbuf_get_u64(blob, &grl->bitmaps_size)) != 0) {
 		debug3("hibagrl_decode: sshbuf_get_u64 returned %d: %s", ret, ssh_err(ret));
 		return HIBA_INTERNAL_ERROR;
@@ -202,9 +202,9 @@ hibagrl_decode(struct hibagrl *grl, struct sshbuf *blob) {
 		return HIBA_INVALID_GRL;
 	}
 
-	// The parsed_revocations field is left NULL on purpose and will only be
-	// actually parsed from serials/bitmaps sections when needed using
-	// hibagrl_map().
+	/* The parsed_revocations field is left NULL on purpose and will only be
+	 * actually parsed from serials/bitmaps sections when needed using
+	 * hibagrl_map(). */
 	debug2("hibagrl_decode: grl->n_serials = %" PRIu32, grl->n_serials);
 
 	return HIBA_OK;
@@ -220,8 +220,8 @@ hibagrl_map(struct hibagrl *grl) {
 	if (grl->parsed != NULL)
 		return HIBA_BAD_PARAMS;
 
-	// The first parsed_revocation doesn't count, it is only used as the
-	// head of the linked list.
+	/* The first parsed_revocation doesn't count, it is only used as the
+	 * head of the linked list. */
 	grl->parsed = calloc(1, sizeof(struct parsed_revocations));
 	r = grl->parsed;
 
@@ -243,7 +243,7 @@ hibagrl_map(struct hibagrl *grl) {
 		memcpy(r->map, grl->bitmaps + offset, r->size);
 	}
 
-	// Nullify mmapped sections since we now have an editable GRL.
+	/* Nullify mmapped sections since we now have an editable GRL. */
 	grl->serials = NULL;
 	grl->bitmaps = NULL;
 	grl->bitmaps_size = 0;
@@ -262,7 +262,7 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 	if (grl == NULL || blob == NULL || grl->parsed == NULL)
 		return HIBA_BAD_PARAMS;
 
-	// Write the header.
+	/* Write the header. */
 	if ((ret = sshbuf_put_u32(blob, HIBA_GRL_MAGIC)) < 0) {
 		debug3("hibagrl_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		return HIBA_INTERNAL_ERROR;
@@ -291,7 +291,7 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 		return HIBA_INTERNAL_ERROR;
 	}
 
-	// Now we build the serial list.
+	/* Now we build the serial list. */
 	debug3("hibagrl_encode: serial list section @%zu", sshbuf_len(blob));
 	if ((ret = sshbuf_allocate(blob, serials_section_size)) < 0) {
 		debug3("hibagrl_encode: sshbuf_allocate(%" PRIu64 ") returned %d: %s",
@@ -299,12 +299,12 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 		return HIBA_INTERNAL_ERROR;
 	}
 
-	// Calculate and reserve room for the bitmap size.
+	/* Calculate and reserve room for the bitmap size. */
 	r = grl->parsed;
 	while (r->next != NULL) {
 		r = r->next;
 
-		// Add the serial to the 1st section.
+		/* Add the serial to the 1st section. */
 		if ((ret = sshbuf_put_u64(blob, r->serial)) < 0) {
 			debug3("hibagrl_encode: sshbuf_put_u64 returned %d: %s", ret, ssh_err(ret));
 			return HIBA_INTERNAL_ERROR;
@@ -347,7 +347,7 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 
 	debug2("hibagrl_encode: patch bitmap section size = %" PRIu64, offset);
 
-	// Write trailer magic.
+	/* Write trailer magic. */
 	if ((ret = sshbuf_put_u32(blob, HIBA_GRL_MAGIC)) < 0) {
 		debug3("hibagrl_encode: sshbuf_put_u32 returned %d: %s", ret, ssh_err(ret));
 		return HIBA_INTERNAL_ERROR;
@@ -356,26 +356,26 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 	return HIBA_OK;
 }
 
-// The block of a grant index represents the char that contains the bit
-// representing the grant.
-// This corresponds to the floor of the position of the bit divided by 8 (size
-// of a char).
-static inline u_int32_t
+/* The block of a grant index represents the char that contains the bit
+ * representing the grant.
+ * This corresponds to the floor of the position of the bit divided by 8 (size
+ * of a char). */
+static __inline__ u_int32_t
 block_for_idx(u_int32_t idx) {
 	return idx >> 3;
 }
 
-// The offset of a grant index represents the position of the bit representing
-// the grant inside the block.
-// This corresponds to remainder of the position of the bit divided by 8 (size
-// of a char).
-static inline u_int32_t
+/* The offset of a grant index represents the position of the bit representing
+ * the grant inside the block.
+ * This corresponds to remainder of the position of the bit divided by 8 (size
+ * of a char). */
+static __inline__ u_int32_t
 offset_for_idx(u_int32_t idx) {
 	return idx & 0x7;
 }
 
-// We want to update the offset in the right block.
-static inline void
+/* We want to update the offset in the right block. */
+static __inline__ void
 revoke_idx(struct parsed_revocations *r, u_int32_t idx) {
 	u_int32_t block = block_for_idx(idx);
 	u_int32_t offset = offset_for_idx(idx);
@@ -383,10 +383,10 @@ revoke_idx(struct parsed_revocations *r, u_int32_t idx) {
 	r->map[block] |= 1 << offset;
 }
 
-// A grant ID is marked as revoked if both conditions hold true:
-// - the map size is larger or equal to the grant idx.
-// - the grant ID corresponding bit is set.
-static inline int
+/* A grant ID is marked as revoked if both conditions hold true:
+ * - the map size is larger or equal to the grant idx.
+ * - the grant ID corresponding bit is set. */
+static __inline__ int
 is_revoked_idx(const unsigned char *bitmap, u_int32_t size, u_int32_t idx) {
 	u_int32_t block = block_for_idx(idx);
 	u_int32_t offset = offset_for_idx(idx);
@@ -404,7 +404,7 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 	if (grl->parsed == NULL)
 		return HIBA_BAD_PARAMS;
 
-	// Look for where to add the revocation.
+	/* Look for where to add the revocation. */
 	r = grl->parsed;
 	while (r->next) {
 		if (r->next->serial >= serial)
@@ -412,7 +412,7 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 		r = r->next;
 	}
 
-	// Maybe add a new serial to the ordered list.
+	/* Maybe add a new serial to the ordered list. */
 	if ((r->next == NULL) || (r->next->serial > serial)) {
 		struct parsed_revocations *next = r->next;
 		debug2("hibagrl_revoke_grant: adding a new entry for serial 0x%" PRIx64 " after 0x%" PRIx64 , serial, r->serial);
@@ -429,7 +429,7 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 
 	required_size = block_for_idx(hi) + 1;
 
-	// Allocate or update the bitmap
+	/* Allocate or update the bitmap. */
 	if (r->size < required_size) {
 		char *prev_map = r->map;
 		debug2("hibagrl_revoke_grant: resizing map to %d", required_size);
@@ -438,7 +438,7 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 		r->size = required_size;
 		free(prev_map);
 	}
-	// Add our grants.
+	/* Add our grants. */
 	for (i = lo; i <= hi; ++i) {
 		revoke_idx(r, i);
 	}
@@ -459,13 +459,13 @@ hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) 
 	if (grl->serials == NULL || grl->bitmaps == NULL)
 		return HIBA_BAD_PARAMS;
 
-	// Early return if the GRL contains no serials.
+	/* Early return if the GRL contains no serials. */
 	if (grl->n_serials == 0)
 		return HIBA_OK;
 
 	max = grl->n_serials - 1;
 
-	// First we search through serials.
+	/* First we search through serials. */
 	while (1) {
 		u_int64_t min_serial = PEEK_U64(&grl->serials[min].serial);
 		u_int64_t max_serial = PEEK_U64(&grl->serials[max].serial);
@@ -478,8 +478,8 @@ hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) 
 		debug3("hibagrl_check: target 0x%" PRIx64 " against current serial 0x%" PRIx64 "(@%" PRIx64 ")", serial, cur_serial, cur);
 
 		if (cur_serial == serial) {
-			// We only break the loop when we found a matching
-			// serial which index we store in cur.
+			/* We only break the loop when we found a matching
+			 * serial which index we store in cur. */
 			break;
 		} else if (cur_serial > serial) {
 			max = cur - 1;
@@ -495,8 +495,8 @@ hibagrl_check(const struct hibagrl *grl, u_int64_t serial, u_int32_t grant_idx) 
 
 	debug2("hibagrl_check: found in GRL: 0x%" PRIx64, serial);
 
-	// If the offset points outside of the bitmap, our GRL is invalid.
-	// Fail closed.
+	/* If the offset points outside of the bitmap, our GRL is invalid.
+	 * Fail closed. */
 	offset = PEEK_U64(&grl->serials[cur].offset);
 	if (offset > grl->bitmaps_size)
 		return HIBA_BAD_PARAMS;
@@ -536,8 +536,8 @@ hibagrl_dump_content(const struct hibagrl *grl, u_int64_t *serial, FILE *f) {
 			fprintf(f, "  [0x%.16" PRIx64 "]: ", r->serial);
 			dump_map(r, f);
 
-			// When filtering on serial, we can early exit as each
-			// serial appears at most once.
+			/* When filtering on serial, we can early exit as each
+			 * serial appears at most once. */
 			if (serial)
 				break;
 		}
