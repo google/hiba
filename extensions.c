@@ -322,13 +322,13 @@ hibaext_encode_raw(const struct hibaext **ext, int count, int compress, struct s
 		}
 	}
 
-	if (compress) {
+err:
+	if (compress && ret == 0) {
 		ret = hibaext_maybe_deflate(d, compress, blob);
 	} else {
 		d = NULL;
 	}
 
-err:
 	sshbuf_free(one);
 	sshbuf_free(d);
 	return ret;
@@ -337,7 +337,7 @@ err:
 int
 hibaext_encode_b64(const struct hibaext **ext, int count, int compress, struct sshbuf *blob) {
 	int i;
-	int ret = 0;
+	int ret = HIBA_OK;
 	struct sshbuf *d = blob;
 
 	sshbuf_reset(blob);
@@ -372,13 +372,13 @@ hibaext_encode_b64(const struct hibaext **ext, int count, int compress, struct s
 		goto err;
 	}
 
-	if (compress) {
+err:
+	if (compress && ret == HIBA_OK) {
 		ret = hibaext_maybe_deflate(d, compress, blob);
 	} else {
 		d = NULL;
 	}
 
-err:
 	sshbuf_free(d);
         return ret;
 }
