@@ -39,6 +39,9 @@
 #define HIBA_KEY_HOSTNAME "hostname"
 #define HIBA_KEY_OPTIONS "options"
 
+/* HIBA key modifier for negative matching constraints. */
+#define HIBA_NEGATIVE_MATCHING '!'
+
 /* HIBA extension type. */
 struct hibaext;
 
@@ -77,11 +80,13 @@ int hibaext_encode_b64(const struct hibaext **ext, int count, int compress, stru
  * - extension type is known
  * - extension contains the required 'domain' key/pair
  * - if the extension type is identity, it doesn't contain reserved keys
- *   (validity, hostname, role, options).
- * - if the 'validity' key is set, it must be an integer greated than 0.
+ *   (validity, hostname, role, options), or negative keys.
+ * - if the 'validity' key is set, it must be an integer greated than 0, and
+ *   cannot be set as negative matching.
  * - identity extensions don't have duplicate keys
  * - if the 'options' key is set, it must not contain \n or unquoted
- *   whitespaces, and open quotes must be closed.
+ *   whitespaces, and open quotes must be closed, and cannot be set as negative
+ *   matching
  */
 int hibaext_sanity_check(const struct hibaext *ext);
 
