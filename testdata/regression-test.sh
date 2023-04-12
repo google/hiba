@@ -54,13 +54,13 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: display identities"
-EXPECTED="identity@hibassh.dev (v1):
+EXPECTED="identity@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] owner = 'user1'
  [2] purpose = 'production'"
 GOT=$(RUN_T ../hiba-gen -d -f "$dest/policy/identities/owner:user1")
 EXPECT_EQ "$EXPECTED" "$GOT"
-EXPECTED="identity@hibassh.dev (v1):
+EXPECTED="identity@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] owner = 'user2'
  [2] purpose = 'testing'"
@@ -78,12 +78,18 @@ RUN_T ../hiba-gen -f "$dest/policy/grants/all" domain hibassh.dev &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/disallowed" domain hibassh.dev &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/2roles" domain hibassh.dev role user1 role user2 &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/selfonly" domain hibassh.dev role @PRINCIPALS &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/negativematch" domain hibassh.dev owner user1 owner user2 '!purpose' production &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/negativematch:eu" domain hibassh.dev '!purpose' production location eu &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/multinegativematch" domain hibassh.dev '!purpose' production '!purpose' testing &>> "$log"
 EXPECT_EXISTS "$dest/policy/grants/all"
 EXPECT_EXISTS "$dest/policy/grants/location:eu"
 EXPECT_EXISTS "$dest/policy/grants/purpose:testing"
 EXPECT_EXISTS "$dest/policy/grants/disallowed"
 EXPECT_EXISTS "$dest/policy/grants/2roles"
 EXPECT_EXISTS "$dest/policy/grants/selfonly"
+EXPECT_EXISTS "$dest/policy/grants/negativematch"
+EXPECT_EXISTS "$dest/policy/grants/negativematch:eu"
+EXPECT_EXISTS "$dest/policy/grants/multinegativematch"
 EXPECT_NOT_EXISTS "$dest/policy/grants/badcmd"
 SUCCESS
 #####
@@ -114,18 +120,18 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: display grants"
-EXPECTED="grant@hibassh.dev (v1):
+EXPECTED="grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] location = 'EU'"
 GOT=$(RUN_T ../hiba-gen -d -f "$dest/policy/grants/location:eu")
 EXPECT_EQ "$EXPECTED" "$GOT"
-EXPECTED="grant@hibassh.dev (v1):
+EXPECTED="grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] purpose = 'testing'
  [2] role = 'tester'"
 GOT=$(RUN_T ../hiba-gen -d -f "$dest/policy/grants/purpose:testing")
 EXPECT_EQ "$EXPECTED" "$GOT"
-EXPECTED="grant@hibassh.dev (v1):
+EXPECTED="grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN_T ../hiba-gen -d -f "$dest/policy/grants/all")
 EXPECT_EQ "$EXPECTED" "$GOT"
@@ -133,7 +139,7 @@ SUCCESS
 #####
 
 START_TEST "hiba-gen: grant in cmdline"
-EXPECTED="grant@hibassh.dev (v1):
+EXPECTED="grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] location = 'EU'"
 GOT=$(RUN_T ../hiba-gen -d -f "$(cat $dest/policy/grants/location:eu)")
@@ -144,7 +150,7 @@ SUCCESS
 START_TEST "hiba-gen: grant format: single raw"
 EXPECTED="certificate 'test' (1 principal) contains 1 HIBA grant
  principal: 'foobar'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '1'"
 RUN ../generate-test-certs "$SINGLERAW" "$tmpdir/user-singleraw-cert.pub"
@@ -161,7 +167,7 @@ SUCCESS
 START_TEST "hiba-gen: grant format: single base64"
 EXPECTED="certificate 'test' (1 principal) contains 1 HIBA grant
  principal: 'foobar'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '1'"
 RUN ../generate-test-certs "$SINGLEB64" "$tmpdir/user-singleb64-cert.pub"
@@ -178,10 +184,10 @@ SUCCESS
 START_TEST "hiba-gen: grant format: multi raw"
 EXPECTED="certificate 'test' (1 principal) contains 2 HIBA grants
  principal: 'foobar'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '1'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '2'"
 RUN ../generate-test-certs "$MULTIRAW" "$tmpdir/user-multiraw-cert.pub"
@@ -198,10 +204,10 @@ SUCCESS
 START_TEST "hiba-gen: grant format: multi base64"
 EXPECTED="certificate 'test' (1 principal) contains 2 HIBA grants
  principal: 'foobar'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '1'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] id = '2'"
 RUN ../generate-test-certs "$MULTIB64" "$tmpdir/user-multib64-cert.pub"
@@ -245,16 +251,16 @@ SUCCESS
 START_TEST "hiba-gen: display certificates"
 EXPECTED="certificate 'user1' (1 principal) contains 1 HIBA grant
  principal: 'user1'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN_T ../hiba-gen -d -f "$dest/users/user1-cert.pub")
 EXPECT_EQ "$EXPECTED" "$GOT"
 EXPECTED="certificate 'user2' (1 principal) contains 2 HIBA grants
  principal: 'user2'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] location = 'EU'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'
  [1] purpose = 'testing'
  [2] role = 'tester'"
@@ -266,7 +272,7 @@ SUCCESS
 START_TEST "hiba-gen: certificate in cmdline"
 EXPECTED="certificate 'user1' (1 principal) contains 1 HIBA grant
  principal: 'user1'
-grant@hibassh.dev (v1):
+grant@hibassh.dev (v2):
  [0] domain = 'hibassh.dev'"
 GOT=$(RUN_T ../hiba-gen -d -f "$(cat $dest/users/user1-cert.pub)")
 EXPECT_EQ "$EXPECTED" "$GOT"
@@ -384,6 +390,38 @@ GOT=$(RUN_T ../hiba-chk -i "$dest/hosts/host1-cert.pub" -r root "$dest/users/use
 GOTCODE=$?
 EXPECT_EQ "" "$GOT"
 EXPECT_EQ 47 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: allow negative match"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user2" -r root -p user2 "$dest/policy/grants/negativematch")
+GOTCODE=$?
+EXPECT_EQ "user2" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: deny negative match"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user1" -r root -p user1 "$dest/policy/grants/negativematch")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 48 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: deny repeated negative match"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user2" -r root -p user2 "$dest/policy/grants/multinegativematch")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 48 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: deny missing negative match"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user2" -r root -p user2 "$dest/policy/grants/negativematch:eu")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 40 "$GOTCODE"
 SUCCESS
 #####
 

@@ -56,7 +56,14 @@ The reserved keys are evaluated as follows:
 * options: not evaluated, only used to tune the resulting authorization when a
   grant is matching.
 
+Negative constraints can be expressed by prefixing the key with a `!` to
+perform a logical NOT during the authorization evaluation.
+
 ## Repeated keys in grant extension
 
-If a key is repeated in the grant, it will be considered a match if one of the
-repeated values is matching the host value.
+If a positive matching key (default) is repeated in the grant, it will be
+considered a match if one of the repeated values is matching the host value: OR
+semantics.
+
+Negative keys on the other hand are evaluated using AND semantics, meaning that,
+authorizations will be denied if a single negative constraint matches.

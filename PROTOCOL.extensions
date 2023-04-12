@@ -119,3 +119,15 @@ HIBA reserves five extension keys with a special meaning:
 :           : role available on the target host. The special value @PRINCIPALS :
 :           : will be automatically expanded to the list of principals declared:
 :           : in the certificate.                                              :
+
+## Special key modifier
+
+HIBA reserves the HIBA_NEGATIVE_MATCHING char used as the first character of a
+key as a way to express a negative matching constraint. See
+PROTOCOL.authorizations for more details on how negative matching is evaluated.
+
+HIBA_NEGATIVE_MATCHING is defined as:
+
+```
+#define HIBA_NEGATIVE_MATCHING '!'
+```

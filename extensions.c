@@ -20,8 +20,10 @@
 #include "log.h"
 #include "ssherr.h"
 
-#define HIBA_CURRENT_VERSION 		0x1
+#define HIBA_CURRENT_VERSION		0x2
 #define HIBA_MIN_SUPPORTED_VERSION	0x1
+
+#define HIBA_NEGATIVE_MATCHING_VERSION	0x2
 
 struct pair {
 	char *key;
@@ -537,6 +539,12 @@ hibaext_add_pair(struct hibaext *ext, const char *key, const char *value) {
 		pair = pair->next;
 	pair->next = new;
 
+	/* The use of negative matching constraints requires a bump of the
+	 * min HIBA version required, to avoid accidental matching on older
+	 * hiba-chk binaries. */
+	if (key[0] == HIBA_NEGATIVE_MATCHING)
+		ext->min_version = HIBA_NEGATIVE_MATCHING_VERSION;
+
 	return HIBA_OK;
 }
 
@@ -575,20 +583,31 @@ hibaext_sanity_check(const struct hibaext *ext) {
 		char *value;
 
 		while (hibaext_key_value_at(ext, i, &key, &value) == HIBA_OK) {
-			if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
+			int key_offset = 0;
+			int negative_matching = 0;
+			if (key[0] == HIBA_NEGATIVE_MATCHING) {
+				key_offset = 1;
+				negative_matching = 1;
+			}
+
+			if (strcmp(key+key_offset, HIBA_KEY_VALIDITY) == 0) {
 				char *ok;
 				int v = strtol(value, &ok, 0);
 
-				if (ok == value || *ok != '\0')
+				if (negative_matching)
+					ret = HIBA_UNEXPECTED_KEY;
+				else if (ok == value || *ok != '\0')
 					ret = HIBA_GRANT_BADVALIDITY;
 				else if (v < 0)
 					ret =  HIBA_GRANT_BADVALIDITY;
-			} else if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
+			} else if (strcmp(key+key_offset, HIBA_KEY_OPTIONS) == 0) {
 				size_t i;
 				int quoted = 0;
 				int dquoted = 0;
 
-				for (i = 0; i < strlen(value); ++i) {
+				if (negative_matching)
+					ret = HIBA_UNEXPECTED_KEY;
+				else for (i = 0; i < strlen(value); ++i) {
 					switch (value[i]) {
 					case '\n':
 						ret = HIBA_GRANT_BADOPTIONS;
@@ -628,7 +647,9 @@ hibaext_sanity_check(const struct hibaext *ext) {
 			char *v = NULL;
 
 			debug3("hibaext_sanity_check: checking key '%s'", key);
-			if (strcmp(key, HIBA_KEY_HOSTNAME) == 0)
+			if (key[0] == HIBA_NEGATIVE_MATCHING)
+				ret = HIBA_UNEXPECTED_KEY;
+			else if (strcmp(key, HIBA_KEY_HOSTNAME) == 0)
 				ret = HIBA_UNEXPECTED_KEY;
 			else if (strcmp(key, HIBA_KEY_ROLE) == 0)
 				ret = HIBA_UNEXPECTED_KEY;

@@ -19,8 +19,8 @@
 #include "extensions.h"
 #include "log.h"
 
-#define _HIBA_CHECK_SUCCESS	"match"
-#define _HIBA_CHECK_FAILURE	"invalid"
+#define _HIBA_CHECK_SUCCESS	"accepted"
+#define _HIBA_CHECK_FAILURE	"refused"
 #define _HIBA_CHECK_FATAL	"fatal"
 
 /* The hibaenv structure is only suppose to live for the time of a check:
@@ -69,32 +69,59 @@ hibachk_keycmp(const struct hibaext *identity, const char *key, const char *valu
 }
 
 void
-hibachk_register_result(struct hibaext *result, const char *key, int status) {
+hibachk_register_result(struct hibaext *result, const char *key, int status, int negative_matching) {
 	char *value;
 
 	if (hibaext_value_for_key(result, key, &value) < 0) {
+		/* First check for key: */
+		char *on_match = _HIBA_CHECK_SUCCESS;
+		char *on_miss = _HIBA_CHECK_FAILURE;
+
+		if (negative_matching) {
+			on_match = _HIBA_CHECK_FAILURE;
+			on_miss = _HIBA_CHECK_SUCCESS;
+		}
 		if (status == 0) {
-			debug2("hibachk_register_result: accepted");
-			hibaext_add_pair(result, key, _HIBA_CHECK_SUCCESS);
+			debug2("hibachk_register_result: %s", on_match);
+			hibaext_add_pair(result, key, on_match);
 		} else if (status == HIBA_CHECK_NOKEY) {
 			debug2("hibachk_register_result: fatal");
 			hibaext_add_pair(result, key, _HIBA_CHECK_FATAL);
 		} else  {
-			debug2("hibachk_register_result: refused");
-			hibaext_add_pair(result, key, _HIBA_CHECK_FAILURE);
+			debug2("hibachk_register_result: %s", on_miss);
+			hibaext_add_pair(result, key, on_miss);
 		}
 	} else {
+		/* Repeated key check, we must implement result merging as OR
+		 * for positive matches, or AND for negative matches.
+		 * Starting with a previously valid constraint: */
 		if (strcmp(value, _HIBA_CHECK_SUCCESS) == 0) {
-			debug2("hibachk_register_result: refused, but already accepted previously");
-			free(value);
-			return;
-		}
-		if (status == 0) {
-			debug2("hibachk_register_result: accepted, overriding previous failures");
-			hibaext_update_pair(result, key, _HIBA_CHECK_SUCCESS);
+			if (negative_matching && status == 0) {
+				/* On negative matching, one match fails the grant: */
+				hibaext_update_pair(result, key, _HIBA_CHECK_FAILURE);
+				debug2("hibachk_register_result: refused because negative matching");
+			} else {
+				/* Here, either:
+				 * -  positive matching and previously granted
+				 * -  negative matching, previously granted and
+				 *    currently still not matching. */
+				debug2("hibachk_register_result: still accepted");
+			}
 		} else {
-			debug2("hibachk_register_result: refused again");
+			/* From here, we know previous contraint where invalid: */
+			if (!negative_matching && status == 0) {
+				/* newly valid constraint with positive matching: */
+				debug2("hibachk_register_result: accepted, overriding previous failures");
+				hibaext_update_pair(result, key, _HIBA_CHECK_SUCCESS);
+			} else {
+				if (negative_matching) {
+					debug2("hibachk_register_result: negative matching previously refused");
+				} else {
+					debug2("hibachk_register_result: positive matching refused again");
+				}
+			}
 		}
+		free(value);
 	}
 }
 
@@ -234,31 +261,40 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 	/* Test all keys from the grant against the identity: */
 	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
 		int skip = 0;
+		int key_offset = 0;
+		int negative_matching = 0;
 		char *key;
 		char *value;
 
 		if ((ret = hibaext_key_value_at(grant, i, &key, &value)) < 0) {
 			debug2("hibachk_query: failed to extract key/pair");
 			goto err;
-		} else if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
+		}
+		if (key[0] == HIBA_NEGATIVE_MATCHING) {
+			debug2("hibachk_query: found negative matching");
+			negative_matching = 1;
+			key_offset = 1;
+		}
+
+		if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
 			debug2("hibachk_query: skipping 'options' key");
 			skip = 1;
 		} else if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
 			debug2("hibachk_query: skipping 'validity' key: already verified");
 			skip = 1;
-		} else if (strcmp(key, HIBA_KEY_HOSTNAME) == 0) {
+		} else if (strcmp(key+key_offset, HIBA_KEY_HOSTNAME) == 0) {
 			debug2("hibachk_query: testing hostname %s", value);
 			ret = strcmp(hostname, value);
-		} else if (strcmp(key, HIBA_KEY_ROLE) == 0) {
+		} else if (strcmp(key+key_offset, HIBA_KEY_ROLE) == 0) {
 			debug2("hibachk_query: testing role %s", value);
 			ret = strcmp(role, value);
 		} else {
 			debug2("hibachk_query: testing generic key");
-			ret = hibachk_keycmp(identity, key, value);
+			ret = hibachk_keycmp(identity, key+key_offset, value);
 		}
 
 		if (!skip) {
-			hibachk_register_result(result, key, ret);
+			hibachk_register_result(result, key, ret, negative_matching);
 		}
 		free(key);
 		free(value);
