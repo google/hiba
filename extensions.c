@@ -264,7 +264,7 @@ hibaext_maybe_deflate(struct sshbuf *in, int compress, struct sshbuf *out) {
 			sshbuf_put(temp, buf, stream.total_out);
 		}
 		ret = HIBA_OK;
-		debug3("hibaext_maybe_deflate: compression out %ld.", sshbuf_len(temp));
+		debug3("hibaext_maybe_deflate: compression out %zu.", sshbuf_len(temp));
 	}
 err:
 #endif  /* WITH_EXTENSION_COMPRESSION */

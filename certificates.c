@@ -135,7 +135,7 @@ hibacert_maybe_inflate(struct sshbuf *extensions) {
 	inflateEnd(&stream);
 
 	if (ret == Z_STREAM_END) {
-		debug2("hibacert_maybe_inflate: using decompressed extension %ld -> %ld bytes", len, sshbuf_len(decomp));
+		debug2("hibacert_maybe_inflate: using decompressed extension %zu -> %zu bytes", len, sshbuf_len(decomp));
 		sshbuf_consume(extensions, len);
 		return decomp;
 	}
