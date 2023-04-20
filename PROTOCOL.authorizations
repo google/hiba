@@ -65,5 +65,6 @@ If a positive matching key (default) is repeated in the grant, it will be
 considered a match if one of the repeated values is matching the host value: OR
 semantics.
 
-Negative keys on the other hand are evaluated using AND semantics, meaning that,
-authorizations will be denied if a single negative constraint matches.
+Negative keys on the other hand are evaluated using AND semantics, meaning
+that, authorizations will be granted only if all negative constraints do
+not match.
