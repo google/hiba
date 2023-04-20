@@ -41,7 +41,10 @@ Where type is defined by the following:
 #define HIBA_GRANT_EXT		'g'
 ```
 
-The current version starts at 1, and so does minimum supported version.
+The current extension format version is 2, but can be reset to 1 when a grant
+is not using negative constraint matching in order to maximize compatibility
+with older HIBA binaries without compromizing security. The minimum supported
+extension format version is still 1.
 
 The rest of the data is a list of strings key1, value1, key2, value2, ...
 There must be exactly one value per key.
