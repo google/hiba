@@ -14,6 +14,11 @@ mkdir -p "$tmpdir"
 
 date > "$log"
 
+# Prepare dest dir
+mkdir -p "$dest/bin"
+rsync -a ../hiba-grl ../hiba-gen ../hiba-chk ../.libs $dest/bin/
+export PATH="$dest/bin:$PATH"
+
 # Define extension formats
 SINGLERAW=1
 SINGLERAWZ=2
