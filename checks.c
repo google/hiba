@@ -61,7 +61,7 @@ hibachk_keycmp(const struct hibaext *identity, const char *key, const char *valu
 	debug2("hibachk_keycmp: processing against %s", must_match);
 
 	/* Compare must_match and value using globs. */
-	if (fnmatch(value, must_match, 0) == FNM_NOMATCH)
+	if (fnmatch(value, must_match, 0) != 0)
 		ret = HIBA_CHECK_DENIED;
 	free(must_match);
 
@@ -284,10 +284,10 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 			skip = 1;
 		} else if (strcmp(key+key_offset, HIBA_KEY_HOSTNAME) == 0) {
 			debug2("hibachk_query: testing hostname %s", value);
-			ret = strcmp(hostname, value);
+			ret = fnmatch(value, hostname, 0);
 		} else if (strcmp(key+key_offset, HIBA_KEY_ROLE) == 0) {
 			debug2("hibachk_query: testing role %s", value);
-			ret = strcmp(role, value);
+			ret = fnmatch(value, role, 0);
 		} else {
 			debug2("hibachk_query: testing generic key");
 			ret = hibachk_keycmp(identity, key+key_offset, value);
