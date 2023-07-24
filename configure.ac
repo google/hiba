@@ -102,14 +102,14 @@ AC_COMPILE_IFELSE(
 CFLAGS="$save_CFLAGS"
 
 AC_MSG_CHECKING(whether compiler supports hardening options)
-CFLAGS="$CFLAGS $extra_CFLAGS -Wa,--noexecstack -Werror"
+CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -Wa,--noexecstack -Werror"
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM()], [
-		extra_CFLAGS="$extra_CFLAGS -Wa,--noexecstack"
+		extra_CPPFLAGS="$extra_CPPFLAGS -Wa,--noexecstack"
 		AC_MSG_RESULT([yes])
 	], [AC_MSG_RESULT([no])],
 )
-CFLAGS="$save_CFLAGS"
+CPPFLAGS="$save_CPPFLAGS"
 
 # Check for required LDFLAGS availability
 AC_MSG_CHECKING(whether linker supports hardening options)
