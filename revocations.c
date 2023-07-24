@@ -434,9 +434,13 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 		char *prev_map = r->map;
 		debug2("hibagrl_revoke_grant: resizing map to %d", required_size);
 		r->map = calloc(required_size, 1);
-		memcpy(r->map, prev_map, r->size);
+		if (prev_map) {
+			/* if we already add revocations for this serial, we
+			 * must copy them. */
+			memcpy(r->map, prev_map, r->size);
+			free(prev_map);
+		}
 		r->size = required_size;
-		free(prev_map);
 	}
 	/* Add our grants. */
 	for (i = lo; i <= hi; ++i) {
