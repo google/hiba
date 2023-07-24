@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 m4_define([MAJOR], 1)
-m4_define([MINOR], 0)
+m4_define([MINOR], 2)
 
 AC_PREREQ([2.69])
 AC_INIT([HIBA], [MAJOR.MINOR], [hibassh@google.com])
