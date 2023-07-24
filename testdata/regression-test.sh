@@ -81,6 +81,9 @@ RUN_T ../hiba-gen -f "$dest/policy/grants/selfonly" domain hibassh.dev role @PRI
 RUN_T ../hiba-gen -f "$dest/policy/grants/negativematch" domain hibassh.dev owner user1 owner user2 '!purpose' production &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/negativematch:eu" domain hibassh.dev '!purpose' production location eu &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/multinegativematch" domain hibassh.dev '!purpose' production '!purpose' testing &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardhost" domain hibassh.dev 'hostname' '*' &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardhost_invalid" domain hibassh.dev 'hostname' '__invalid__*' &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardrole" domain hibassh.dev 'role' 'user*' &>> "$log"
 EXPECT_EXISTS "$dest/policy/grants/all"
 EXPECT_EXISTS "$dest/policy/grants/location:eu"
 EXPECT_EXISTS "$dest/policy/grants/purpose:testing"
@@ -90,6 +93,9 @@ EXPECT_EXISTS "$dest/policy/grants/selfonly"
 EXPECT_EXISTS "$dest/policy/grants/negativematch"
 EXPECT_EXISTS "$dest/policy/grants/negativematch:eu"
 EXPECT_EXISTS "$dest/policy/grants/multinegativematch"
+EXPECT_EXISTS "$dest/policy/grants/wildcardhost"
+EXPECT_EXISTS "$dest/policy/grants/wildcardhost_invalid"
+EXPECT_EXISTS "$dest/policy/grants/wildcardrole"
 EXPECT_NOT_EXISTS "$dest/policy/grants/badcmd"
 SUCCESS
 #####
@@ -305,6 +311,30 @@ SUCCESS
 
 START_TEST "hiba-chk: extension: deny bad role"
 GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user2" -r root -p user1 "$dest/policy/grants/purpose:testing")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 46 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: check wildcards in hostnames"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user1" -r user1 -p user1 "$dest/policy/grants/wildcardhost")
+GOTCODE=$?
+EXPECT_EQ "user1" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user1" -r user1 -p user1 "$dest/policy/grants/wildcardhost_invalid")
+GOTCODE=$?
+EXPECT_EQ "" "$GOT"
+EXPECT_EQ 45 "$GOTCODE"
+SUCCESS
+#####
+
+START_TEST "hiba-chk: extension: check wildcards in role"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user1" -r user1 -p user1 "$dest/policy/grants/wildcardrole")
+GOTCODE=$?
+EXPECT_EQ "user1" "$GOT"
+EXPECT_EQ 0 "$GOTCODE"
+GOT=$(RUN_T ../hiba-chk -i "$dest/policy/identities/owner:user1" -r root -p user1 "$dest/policy/grants/wildcardrole")
 GOTCODE=$?
 EXPECT_EQ "" "$GOT"
 EXPECT_EQ 46 "$GOTCODE"
