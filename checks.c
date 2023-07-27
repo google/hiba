@@ -175,6 +175,8 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 	/* Basic sanity hibachks. */
 	if ((env == NULL) || (grant == NULL))
 		return HIBA_BAD_PARAMS;
+	if (hibaext_type(grant) != HIBA_GRANT_EXT)
+		return HIBA_BAD_PARAMS;
 	if ((ret = hibaext_sanity_check(grant)) < 0)
 		return ret;
 
