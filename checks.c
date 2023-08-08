@@ -35,14 +35,14 @@ struct hibaenv {
 	const struct hibagrl *grl;
 
 	/* Certificate */
-	u_int64_t cert_issue_ts;
-	u_int64_t cert_serial;
+	u_int64_t user_cert_issue_ts;
+	u_int64_t user_cert_serial;
 
 	/* Grant */
 	u_int32_t nprincipals;
 	char **principals;
 
-	/* Extension */
+	/* Host extension */
 	u_int32_t version;
 	u_int32_t min_version;
 };
@@ -161,7 +161,7 @@ hibachk_result(struct hibaext *result) {
 }
 
 int
-hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const struct hibaext *grant, u_int32_t idx, const char *role) {
+hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant, u_int32_t idx, const char *role) {
 	int ret;
 	int expand_self = 0;
 	long expiration = 0;
@@ -192,8 +192,8 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 		return HIBA_CHECK_BADVERSION;
 
 	/* Test GRL. */
-	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, user_serial);
-	if (env->grl != NULL && (ret = hibagrl_check(env->grl, user_serial, idx)) < 0) {
+	debug2("hibachk_authorize: testing GRL against serial %" PRIx64, env->user_cert_serial);
+	if (env->grl != NULL && (ret = hibagrl_check(env->grl, env->user_cert_serial, idx)) < 0) {
 		return ret;
 	}
 
@@ -227,7 +227,7 @@ hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial, const 
 	}
 
 	/* Test for expiration. */
-	if (expiration_set && ((env->cert_issue_ts + expiration) < env->now)) {
+	if (expiration_set && ((env->user_cert_issue_ts + expiration) < env->now)) {
 		debug2("hibachk_authorize: expired");
 		return HIBA_CHECK_EXPIRED;
 	}
@@ -336,9 +336,9 @@ hibaenv_from_host(const struct hibacert *host, const struct hibacert *user, cons
 		debug2("hibaenv_from_host: hibaext_versions returned %d: %s", ret, hiba_err(ret));
 		goto err;
 	}
-	env->cert_serial = hibacert_cert(host)->serial;
-	env->cert_issue_ts = hibacert_cert(host)->valid_after;
 
+	env->user_cert_serial = hibacert_cert(user)->serial;
+	env->user_cert_issue_ts = hibacert_cert(user)->valid_after;
 	env->nprincipals = hibacert_cert(user)->nprincipals;
 	env->principals = hibacert_cert(user)->principals;
 
@@ -355,8 +355,8 @@ hibaenv_from_host(const struct hibacert *host, const struct hibacert *user, cons
 	verbose("  hostname: %s", env->hostname);
 	verbose("  version: %u", env->version);
 	verbose("  min_version: %u", env->min_version);
-	verbose("  cert_serial: %" PRIx64, env->cert_serial);
-	verbose("  cert_issue_ts: %" PRIu64, env->cert_issue_ts);
+	verbose("  user_cert_serial: %" PRIx64, env->user_cert_serial);
+	verbose("  user_cert_issue_ts: %" PRIu64, env->user_cert_issue_ts);
 	for (i = 0; i < env->nprincipals; ++i) {
 		verbose("  user principal: %s", env->principals[i]);
 	}
