@@ -39,7 +39,6 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 	int len;
 	int verdict = HIBA_CHECK_NOGRANTS;
 	struct hibaext **grants;
-	u_int64_t user_serial = hibacert_cert(cert)->serial;
 
 	if ((ret = hibacert_hibaexts(cert, &grants, &len)) < 0)
 		fatal("check_access: can't get grants from certificate: %s", hiba_err(ret));
@@ -47,7 +46,7 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 	debug2("Testing %d grants", len);
 	for (i = 0; i < len; ++i) {
 		verbose("check_access: checking grant %d.", i);
-		if ((ret = hibachk_authorize(env, user_serial, grants[i], i, role)) == HIBA_OK) {
+		if ((ret = hibachk_authorize(env, grants[i], i, role)) == HIBA_OK) {
 			verdict = HIBA_OK;
 			hibachk_authorized_users(env, cert, i, stdout);
 		} else {

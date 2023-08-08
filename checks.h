@@ -22,8 +22,8 @@ struct hibaenv;
  * environment.
  * The `idx` parameter represents the position of the grant in the certificate,
  * used for the GRL check. */
-int hibachk_authorize(const struct hibaenv *env, const u_int64_t user_serial,
-                      const struct hibaext *grant, u_int32_t idx, const char *role);
+int hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant,
+                      u_int32_t idx, const char *role);
 
 /* Output the dynamically generated authorized_users.
  * The output will be generated for the 'idx'th grant of the given 'cert'
