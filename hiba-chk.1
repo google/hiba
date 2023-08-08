@@ -8,10 +8,10 @@
 hiba-chk - OpenSSH helper for host identity based authorizations.
 .SH SYNOSPSIS
 .B hiba-chk
-.RI "[-v] [-g " "grl_file" "] -i " "identity_file" " -r " "role" " -p " "principal" " " "grant_file"
+.RI "[-v] [-y] [-l " "facility" "] [-g " "grl_file" "] -i " "identity_file" " -r " "role" " -p " "principal" " " "grant_file"
 .br
 .B hiba-chk
-.RI "[-v] [-g " "grl_file" "] -i " "host_certificate" " -r " "role" " " "user_certificate"
+.RI "[-v] [-y] [-l " "facility" "] [-g " "grl_file" "] -i " "host_certificate" " -r " "role" " " "user_certificate"
 .SH DESCRIPTION
 .B hiba-chk
 performs checks between a
@@ -44,6 +44,12 @@ This program only accepts short options (single dash).
 .TP
 .B \-v
 Turn on verbose mode. This flag can be repeated up to 3 times for increased verbosity.
+.TP
+.B \-y
+.RI "Turn on syslog mode. Log to syslog (" "auth" " facility by default) instead of stderr."
+.TP
+.B \-l
+.RI "Facility to use for logging when -y is specified. Defaults to " "auth" "."
 .TP
 .B \-g
 The path to a grl_file.

@@ -67,7 +67,9 @@ main(int argc, char **argv) {
 	int opt;
 	int ret;
 	int debug_flag = 0;
+	int use_syslog = 0;
 	int log_level = SYSLOG_LEVEL_INFO;
+	SyslogFacility log_facility = SYSLOG_FACILITY_AUTH;
 	int grl_mmapped = 0;
 	u_int64_t grl_size = 0;
 	unsigned char *grl_data = NULL;
@@ -84,8 +86,11 @@ main(int argc, char **argv) {
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null. */
 	sanitise_stdfd();
 
-	while ((opt = getopt(argc, argv, "vr:i:g:p:")) != -1) {
+	while ((opt = getopt(argc, argv, "yvr:i:g:p:l:")) != -1) {
 		switch (opt) {
+		case 'y':
+			use_syslog = 1;
+			break;
 		case 'v':
 			if (!debug_flag) {
 				debug_flag = 1;
@@ -108,6 +113,11 @@ main(int argc, char **argv) {
 		case 'p':
 			principal = optarg;
 			break;
+		case 'l':
+			log_facility = log_facility_number(optarg);
+			if (log_facility == SYSLOG_FACILITY_NOT_SET)
+				error("Invalid log facility \"%s\"", optarg);
+			break;
 		case '?':
 		default:
 			usage();
@@ -117,7 +127,7 @@ main(int argc, char **argv) {
 	argv += optind;
 	argc -= optind;
 
-	log_init("hiba-chk", log_level, SYSLOG_FACILITY_USER, 1);
+	log_init("hiba-chk", log_level, log_facility, !use_syslog);
 
 	if (debug_flag)
 		debug2("%s: starting in debug mode", __progname);

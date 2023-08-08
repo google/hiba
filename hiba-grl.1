@@ -9,15 +9,15 @@ hiba-grl - Generate, test and displays HIBA Grant Revocation lists (GRL).
 .SH SYNOSPSIS
 .SS Generate GRL file
 .B hiba-grl
-.RI "[-v] -f " "file" " -r -s " "serial" " " "ID1" ...
+.RI "[-v] [-y] [-l " "facility" "] -f " "file" " -r -s " "serial" " " "ID1" ...
 .br
 .SS Test GRL file
 .B hiba-grl
-.RI "[-v] -f " "file" " -t -s " "serial" " " "ID1" ...
+.RI "[-v] [-y] [-l " "facility" "] -f " "file" " -t -s " "serial" " " "ID1" ...
 .br
 .SS Diplay GRL file
 .B hiba-grl
-.RI "[-v] -f " "file" " -d [-s " "serial" "] "
+.RI "[-v] [-y] [-l " "facility" "] -f " "file" " -d [-s " "serial" "] "
 .br
 .SH DESCRIPTION
 .B hiba-grl
@@ -52,6 +52,12 @@ This program only accepts short options (single dash).
 .TP
 .B \-v
 Turn on verbose mode. This flag can be repeated up to 3 times for increased verbosity.
+.TP
+.B \-y
+.RI "Turn on syslog mode. Log to syslog (" "auth" " facility by default) instead of stderr."
+.TP
+.B \-l
+.RI "Facility to use for logging when -y is specified. Defaults to " "auth" "."
 .TP
 .B \-r
 Generate/Update a GRL file and revoke the grants passed in parameters.

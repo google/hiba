@@ -118,7 +118,9 @@ main(int argc, char **argv) {
 	int ret = HIBA_OK;
 	int action = NONE;
 	int debug_flag = 0;
+	int use_syslog = 0;
 	int log_level = SYSLOG_LEVEL_INFO;
+	SyslogFacility log_facility = SYSLOG_FACILITY_AUTH;
 	u_int64_t s = 0;
 	u_int64_t *serial = NULL;
 	char *err;
@@ -129,8 +131,11 @@ main(int argc, char **argv) {
 	/* Ensure that fds 0, 1 and 2 are open or directed to /dev/null */
 	sanitise_stdfd();
 
-	while ((opt = getopt(argc, argv, "vrdtf:s:c:")) != -1) {
+	while ((opt = getopt(argc, argv, "yvrdtf:s:c:l:")) != -1) {
 		switch (opt) {
+		case 'y':
+			use_syslog = 1;
+			break;
 		case 'v':
 			if (!debug_flag) {
 				debug_flag = 1;
@@ -162,6 +167,11 @@ main(int argc, char **argv) {
 			if (*err != '\0')
 				fatal("%s: invalid serial %" PRIu64 ": %s", __progname, s, err);
 			break;
+		case 'l':
+			log_facility = log_facility_number(optarg);
+			if (log_facility == SYSLOG_FACILITY_NOT_SET)
+				error("Invalid log facility \"%s\"", optarg);
+			break;
 		case '?':
 		default:
 			usage();
@@ -171,7 +181,7 @@ main(int argc, char **argv) {
 	argv += optind;
 	argc -= optind;
 
-	log_init("hiba-grl", log_level, SYSLOG_FACILITY_USER, 1);
+	log_init("hiba-grl", log_level, log_facility, !use_syslog);
 
 	if (debug_flag)
 		debug2("%s: starting in debug mode", __progname);

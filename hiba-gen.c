@@ -118,8 +118,10 @@ int
 main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
-
-	int debug_flag = 0, log_level = SYSLOG_LEVEL_INFO;
+	int debug_flag = 0;
+	int use_syslog = 0;
+	int log_level = SYSLOG_LEVEL_INFO;
+	SyslogFacility log_facility = SYSLOG_FACILITY_AUTH;
 	int opt;
 	int decode = 0;
 	int type = HIBA_GRANT_EXT;
@@ -133,8 +135,11 @@ main(int argc, char **argv) {
 	if (argc <= 1)
 		usage();
 
-	while ((opt = getopt(argc, argv, "vdif:")) != -1) {
+	while ((opt = getopt(argc, argv, "yvdif:l:")) != -1) {
 		switch (opt) {
+		case 'y':
+			use_syslog = 1;
+			break;
 		case 'v':
 			if (!debug_flag) {
 				debug_flag = 1;
@@ -154,6 +159,11 @@ main(int argc, char **argv) {
 		case 'f':
 			file = optarg;
 			break;
+		case 'l':
+			log_facility = log_facility_number(optarg);
+			if (log_facility == SYSLOG_FACILITY_NOT_SET)
+				error("Invalid log facility \"%s\"", optarg);
+			break;
 		case '?':
 		default:
 			usage();
@@ -162,7 +172,7 @@ main(int argc, char **argv) {
 	argv += optind;
 	argc -= optind;
 
-	log_init("hiba-gen", log_level, SYSLOG_FACILITY_USER, 1);
+	log_init("hiba-gen", log_level, log_facility, !use_syslog);
 
 	__progname = ssh_get_progname(argv[0]);
 	if (debug_flag)
