@@ -9,16 +9,16 @@ hiba-gen - Generate and displays HIBA extensions.
 .SH SYNOSPSIS
 .SS Generate extensions
 .B hiba-gen
-.RI "[-v] -f " "file" " " "key1" " " "value1" ...
+.RI "[-v] [-y] [-l " "facility" "] -f " "file" " " "key2" " " "value1" ...
 .br
 .B hiba-gen
-.RI "[-v] -i -f " "file" " " "key1" " " "value1" ...
+.RI "[-v] [-y] [-l " "facility" "] -i -f " "file" " " "key1" " " "value1" ...
 .SS Decode extensions
 .B hiba-gen
-.RI "[-v] -d -f " "file"
+.RI "[-v] [-y] [-l " "facility" "] -d -f " "file"
 .br
 .B hiba-gen
-.RI "[-v] -d -f " "content"
+.RI "[-v] [-y] [-l " "facility" "] -d -f " "content"
 .SH DESCRIPTION
 .B hiba-gen
 is used to generate HIBA extensions (grants or identities) that can be later added to a certificate by a Certificate Authority during the sign operation. The content of the extension is given by a list of
@@ -37,6 +37,12 @@ This program only accepts short options (single dash).
 .TP
 .B \-v
 Turn on verbose mode. This flag can be repeated up to 3 times for increased verbosity.
+.TP
+.B \-y
+.RI "Turn on syslog mode. Log to syslog (" "auth" " facility by default) instead of stderr."
+.TP
+.B \-l
+.RI "Facility to use for logging when -y is specified. Defaults to " "auth" "."
 .TP
 .B \-i
 Generate a host extension instead of a grant. Only used for encoding HIBA extensions.
