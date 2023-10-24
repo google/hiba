@@ -12,6 +12,7 @@
 #include "config.h"
 
 #ifdef WITH_EXTENSION_COMPRESSION
+#define ZLIB_CONST
 #include <zlib.h>
 #endif  /* WITH_EXTENSION_COMPRESSION */
 
@@ -19,6 +20,7 @@
 #include "extensions.h"
 #include "log.h"
 #include "ssherr.h"
+#include "xmalloc.h"
 
 #define HIBA_CURRENT_VERSION		0x2
 #define HIBA_MIN_SUPPORTED_VERSION	0x1
@@ -39,6 +41,100 @@ struct hibaext {
 
 	struct pair pairs;
 };
+
+static struct sshbuf*
+hibaext_maybe_inflate(struct sshbuf *extensions) {
+	int ret;
+	struct sshbuf *decomp = NULL;
+#ifdef WITH_EXTENSION_COMPRESSION
+	size_t len = sshbuf_len(extensions);
+	const unsigned char *data = sshbuf_ptr(extensions);
+	z_stream stream;
+
+	memset(&stream, 0, sizeof(stream));
+
+	inflateInit(&stream);
+	stream.next_in = data;
+	stream.avail_in = len;
+
+	do {
+		unsigned char buf[512];
+
+		stream.next_out = buf;
+		stream.avail_out = sizeof(buf);
+		ret = inflate(&stream, Z_SYNC_FLUSH);
+		if (ret != Z_OK && ret != Z_STREAM_END) {
+			break;
+		}
+		if (decomp == NULL) {
+			decomp = sshbuf_new();
+		}
+		if (sshbuf_put(decomp, buf, sizeof(buf) - stream.avail_out) < 0) {
+			ret = Z_BUF_ERROR;
+			break;
+		}
+	} while (ret != Z_STREAM_END);
+	inflateEnd(&stream);
+
+	if (ret == Z_STREAM_END) {
+		debug2("hibaext_maybe_inflate: using decompressed extension %zu -> %zu bytes", len, sshbuf_len(decomp));
+		return decomp;
+	}
+	sshbuf_free(decomp);
+#endif /* WITH_EXTENSION_COMPRESSION */
+	return sshbuf_fromb(extensions);
+}
+
+static int
+hibaext_maybe_deflate(struct sshbuf *in, int compress, struct sshbuf *out) {
+	int ret = HIBA_OK;
+	struct sshbuf *temp = in;
+
+#ifdef WITH_EXTENSION_COMPRESSION
+	if (compress) {
+		z_stream stream;
+
+		temp = sshbuf_new();
+		memset(&stream, 0, sizeof(stream));
+
+		deflateInit(&stream, Z_BEST_COMPRESSION);
+		stream.next_in = (unsigned char*)sshbuf_ptr(in);
+		stream.avail_in = sshbuf_len(in);
+
+		debug3("hibaext_maybe_deflate: compression in %d.", stream.avail_in);
+		while (ret != Z_STREAM_END) {
+			unsigned char buf[512];
+
+			stream.next_out = buf;
+			stream.avail_out = sizeof(buf);
+			ret = deflate(&stream, Z_FINISH);
+			if (ret != Z_OK && ret != Z_STREAM_END) {
+				debug2("hibaext_maybe_deflate: deflate returned %d", ret);
+				ret = HIBA_INTERNAL_ERROR;
+				goto err;
+			}
+			if (sshbuf_put(temp, buf, sizeof(buf) - stream.avail_out) < 0) {
+				ret = HIBA_INTERNAL_ERROR;
+				goto err;
+			}
+		}
+		ret = HIBA_OK;
+		debug3("hibaext_maybe_deflate: compression out %zu.", sshbuf_len(temp));
+err:
+		deflateEnd(&stream);
+	}
+#endif  /* WITH_EXTENSION_COMPRESSION */
+
+	if (ret == HIBA_OK) {
+		if (sshbuf_putb(out, temp) < 0) {
+			ret = HIBA_INTERNAL_ERROR;
+		}
+	}
+	if (temp != in) {
+		sshbuf_free(temp);
+	}
+	return ret;
+}
 
 int
 hibaext_decode(struct hibaext *ext, struct sshbuf *blob) {
@@ -136,6 +232,109 @@ err:
 }
 
 static int
+hibaext_decode_one(struct hibaext ***exts, int nexts, const unsigned char *data, size_t len) {
+	int ret;
+	struct sshbuf *blob = sshbuf_new();
+	if (sshbuf_put(blob, data, len) < 0) {
+		ret = HIBA_INTERNAL_ERROR;
+		goto err;
+	}
+	*exts = xreallocarray(*exts, nexts + 1, sizeof(struct hibaext*));
+	(*exts)[nexts] = hibaext_new();
+	ret = hibaext_decode((*exts)[nexts], blob);
+err:
+	sshbuf_free(blob);
+	return ret;
+}
+
+int
+hibaext_decode_all(struct hibaext ***exts, struct sshbuf *blob) {
+	int nexts = 0;
+	int ret = 0;
+	size_t i = 0;
+	u_int32_t magic;
+	struct sshbuf *extensions = hibaext_maybe_inflate(blob);
+	const unsigned char *data = sshbuf_ptr(extensions);
+	size_t len = sshbuf_len(extensions);
+
+	if (data == NULL) {
+		ret = HIBA_INVALID_EXT;
+		goto err;
+	}
+
+	magic = PEEK_U32(data);
+	debug3("hibaext_decode_all: total extension len %zu, magic=0x%08x", len, magic);
+
+	if (magic == HIBA_B64_MAGIC) {
+		/* Base64 format.
+		 * Either one or multiple comma separated extensions. */
+		debug3("hibaext_decode_all: found base64 extension(s)");
+		int pos = 0;
+		while (i < len) {
+			int extension_len = 0;
+
+			/* If we find a comma or end of buffer, we should have
+			 * a full extension to parse. */
+			if (data[i] == ',') {
+				extension_len = i - pos;
+			} else if (i == len - 1) {
+				extension_len = len - pos;
+			}
+
+			if (extension_len > 0) {
+				debug3("hibaext_decode_all: found extension [%d, %zu]: %.*s", pos, i, extension_len, data+pos);
+				if ((ret = hibaext_decode_one(exts, nexts, data+pos, extension_len)) < 0) {
+					debug3("hibaext_decode_all: hibaext_decode_one returned %d: %s", ret, ssh_err(ret));
+					break;
+				}
+				nexts++;
+				pos = i+1;
+			}
+			++i;
+		}
+	} else if (magic == HIBA_MAGIC) {
+		/* One extension using raw format. */
+		debug3("hibaext_decode_all: found 1 raw extension");
+		if ((ret = hibaext_decode_one(exts, nexts, data, len)) < 0) {
+			debug3("hibaext_decode_all: hibaext_decode_one returned %d: %s", ret, ssh_err(ret));
+		}
+		nexts++;
+	} else if (magic == HIBA_MULTI_EXTS) {
+		/* Consume magic 'MULT' header. */
+		struct sshbuf *raw_exts = sshbuf_from(data+4, len-4);
+
+		debug3("hibaext_decode_all: found raw extension(s)");
+
+		/* Multiple raw extensions starting with the size of the
+		 * extension. */
+		while (sshbuf_len(raw_exts) > 0) {
+			size_t extension_len;
+			const unsigned char *extension_data;
+
+			if ((ret = sshbuf_get_string_direct(raw_exts, &extension_data, &extension_len)) < 0) {
+		                debug3("hibaext_decode_all: sshbuf_get_string returned %d: %s", ret, ssh_err(ret));
+				ret = HIBA_INTERNAL_ERROR;
+				break;
+		        }
+			debug3("hibaext_decode_all: found 1 extension len: %zu", extension_len);
+			if ((ret = hibaext_decode_one(exts, nexts, extension_data, extension_len)) < 0) {
+				debug3("hibaext_decode_all: hibaext_decode_one returned %d: %s", ret, ssh_err(ret));
+				break;
+			}
+			nexts++;
+		}
+		sshbuf_free(raw_exts);
+	}
+err:
+	sshbuf_free(extensions);
+
+	if (ret != HIBA_OK) {
+		return ret;
+	}
+	return nexts;
+}
+
+static int
 hibaext_encode_one_raw(const struct hibaext *ext, struct sshbuf *blob) {
 	int ret;
 	u_int32_t count = 0;
@@ -230,54 +429,6 @@ hibaext_encode_one_b64(const struct hibaext *ext, struct sshbuf *blob) {
 
 err:
 	sshbuf_free(d);
-	return ret;
-}
-
-static int
-hibaext_maybe_deflate(struct sshbuf *in, int compress, struct sshbuf *out) {
-	int ret = HIBA_OK;
-	struct sshbuf *temp = in;
-
-#ifdef WITH_EXTENSION_COMPRESSION
-	if (compress) {
-		z_stream stream;
-
-		temp = sshbuf_new();
-		memset(&stream, 0, sizeof(stream));
-
-		deflateInit(&stream, Z_BEST_COMPRESSION);
-		stream.next_in = (unsigned char*)sshbuf_ptr(in);
-		stream.avail_in = sshbuf_len(in);
-
-		debug3("hibaext_maybe_deflate: compression in %d.", stream.avail_in);
-		while (ret != Z_STREAM_END) {
-			unsigned char buf[512];
-
-			stream.next_out = buf;
-			stream.avail_out = sizeof(buf);
-			ret = deflate(&stream, Z_FINISH);
-			if (ret != Z_OK && ret != Z_STREAM_END) {
-				debug2("hibaext_maybe_deflate: deflate returned %d", ret);
-				ret = HIBA_INTERNAL_ERROR;
-				goto err;
-			}
-			sshbuf_put(temp, buf, stream.total_out);
-		}
-		deflateEnd(&stream);
-		ret = HIBA_OK;
-		debug3("hibaext_maybe_deflate: compression out %zu.", sshbuf_len(temp));
-	}
-err:
-#endif  /* WITH_EXTENSION_COMPRESSION */
-
-	if (ret == HIBA_OK) {
-		if ((ret = sshbuf_putb(out, temp)) < 0) {
-			ret = HIBA_INTERNAL_ERROR;
-		}
-	}
-	if (temp != in) {
-		sshbuf_free(temp);
-	}
 	return ret;
 }
 

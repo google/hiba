@@ -63,6 +63,13 @@ void hibaext_free(struct hibaext *ext);
  * The sshbuf will be consumed. */
 int hibaext_decode(struct hibaext *ext, struct sshbuf *blob);
 
+/* Decode a HIBA blob containing one or multiple HIBA extensions in any
+ * supported formats (b64, raw, compressed, ...).
+ * The exts parameter will contain a list of pointers to all extensions found.
+ * Each extension must be freed by the caller, including the array itself.
+ * Return the number of extensions found or a negative error code. */
+int hibaext_decode_all(struct hibaext ***exts, struct sshbuf *blob);
+
 /* Encode one or more HIBA extensions into a serialized blob to be included in a
  * certificate (either raw or base64 encoded).
  * blob must be already allocated, and will be reset.
