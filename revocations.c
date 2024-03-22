@@ -256,7 +256,6 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 	int ret;
 	struct parsed_revocations *r;
 	u_int64_t serials_section_size;
-	u_int64_t i = 0;
 	u_int64_t offset = 0;
 
 	if (grl == NULL || blob == NULL || grl->parsed == NULL)
@@ -341,8 +340,6 @@ hibagrl_encode(const struct hibagrl *grl, struct sshbuf *blob) {
 			}
 		}
 		offset += r->size + sizeof(r->size);
-
-		++i;
 	}
 
 	debug2("hibagrl_encode: patch bitmap section size = %" PRIu64, offset);
