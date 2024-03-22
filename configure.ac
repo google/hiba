@@ -72,7 +72,7 @@ done
 CFLAGS="$save_CFLAGS"
 
 AC_MSG_CHECKING(whether preprocessor supports _DEFAULT_SOURCE)
-CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_DEFAULT_SOURCE"
+CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_DEFAULT_SOURCE -Werror"
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM()], [
 		extra_CPPFLAGS="$extra_CPPFLAGS -D_DEFAULT_SOURCE"
@@ -82,7 +82,7 @@ AC_COMPILE_IFELSE(
 CPPFLAGS="$save_CPPFLAGS"
 
 AC_MSG_CHECKING(whether preprocessor supports _FORTIFY_SOURCE)
-CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_FORTIFY_SOURCE=2"
+CPPFLAGS="$CPPFLAGS $extra_CPPFLAGS -D_FORTIFY_SOURCE=2 -Werror"
 AC_COMPILE_IFELSE(
 	[AC_LANG_PROGRAM()], [
 		extra_CPPFLAGS="$extra_CPPFLAGS -D_FORTIFY_SOURCE=2"
@@ -113,7 +113,7 @@ CPPFLAGS="$save_CPPFLAGS"
 
 # Check for required LDFLAGS availability
 AC_MSG_CHECKING(whether linker supports hardening options)
-LDFLAGS="$LDFLAGS $extra_LDFLAGS -Wl,-z,relro,-z,now"
+LDFLAGS="$LDFLAGS $extra_LDFLAGS -Wl,-z,relro,-z,now -Werror"
 AC_LINK_IFELSE(
 	[AC_LANG_PROGRAM()], [
 		extra_LDFLAGS="$extra_LDFLAGS -Wl,-z,relro,-z,now"
