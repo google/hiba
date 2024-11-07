@@ -761,11 +761,15 @@ hibaext_sanity_check(const struct hibaext *ext) {
 				size_t i;
 				int quoted = 0;
 				int dquoted = 0;
+				int escaped = 0;
 
 				if (negative_matching)
 					ret = HIBA_UNEXPECTED_KEY;
 				else for (i = 0; i < strlen(value); ++i) {
 					switch (value[i]) {
+					case '\\':
+						escaped = !escaped;
+						continue;
 					case '\n':
 						ret = HIBA_GRANT_BADOPTIONS;
 						break;
@@ -775,13 +779,14 @@ hibaext_sanity_check(const struct hibaext *ext) {
 						break;
 					case '\'':
 						if (!dquoted)
-							quoted = (quoted+1)%2;
+							quoted = !quoted;
 						break;
 					case '"':
-						if (!quoted)
-							dquoted = (dquoted+1)%2;
+						if (!quoted && !escaped)
+							dquoted = !dquoted;
 						break;
 					}
+					escaped = 0;
 					if (ret != 0)
 						break;
 				}

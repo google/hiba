@@ -84,6 +84,7 @@ RUN_T ../hiba-gen -f "$dest/policy/grants/multinegativematch" domain hibassh.dev
 RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardhost" domain hibassh.dev 'hostname' '*' &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardhost_invalid" domain hibassh.dev 'hostname' '__invalid__*' &>> "$log"
 RUN_T ../hiba-gen -f "$dest/policy/grants/wildcardrole" domain hibassh.dev 'role' 'user*' &>> "$log"
+RUN_T ../hiba-gen -f "$dest/policy/grants/force_command" domain hibassh.dev options 'command="echo \"hello world\""' &>> "$log"
 EXPECT_EXISTS "$dest/policy/grants/all"
 EXPECT_EXISTS "$dest/policy/grants/location:eu"
 EXPECT_EXISTS "$dest/policy/grants/purpose:testing"
@@ -96,6 +97,7 @@ EXPECT_EXISTS "$dest/policy/grants/multinegativematch"
 EXPECT_EXISTS "$dest/policy/grants/wildcardhost"
 EXPECT_EXISTS "$dest/policy/grants/wildcardhost_invalid"
 EXPECT_EXISTS "$dest/policy/grants/wildcardrole"
+EXPECT_EXISTS "$dest/policy/grants/force_command"
 EXPECT_NOT_EXISTS "$dest/policy/grants/badcmd"
 SUCCESS
 #####
@@ -224,6 +226,15 @@ if [[ -n "$WITH_EXTENSION_COMPRESSION" ]]; then
 	GOT=$(RUN_T ../hiba-gen -d -f "$tmpdir/user-multib64z-cert.pub")
 	EXPECT_EQ "$EXPECTED" "$GOT"
 fi
+SUCCESS
+#####
+
+START_TEST "hiba-gen: escaped quotes in options"
+EXPECTED="grant@hibassh.dev (v2):
+ [0] domain = 'hibassh.dev'
+ [1] options = 'command=\"echo \\\"hello world\\\"\"'"
+GOT=$(RUN_T ../hiba-gen -d -f "$(cat $dest/policy/grants/force_command)")
+EXPECT_EQ "$EXPECTED" "$GOT"
 SUCCESS
 #####
 
