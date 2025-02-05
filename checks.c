@@ -314,7 +314,7 @@ hibaenv_from_host(const struct hibacert *host, const struct hibacert *user, cons
 	int ret;
 	uint32_t i;
 	struct hibaext **exts;
-	struct hibaenv *env = calloc(sizeof(struct hibaenv), 1);
+	struct hibaenv *env = calloc(1, sizeof(struct hibaenv));
 
 	if ((ret = hibacert_hibaexts(host, &exts, &len)) < 0) {
 		debug2("hibaenv_from_host: hibacert_hibaexts returned %d: %s", ret, hiba_err(ret));

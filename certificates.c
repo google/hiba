@@ -36,7 +36,7 @@ struct hibacert {
 
 struct hibacert*
 hibacert_new() {
-	struct hibacert *cert = calloc(sizeof(struct hibacert), 1);
+	struct hibacert *cert = calloc(1, sizeof(struct hibacert));
 	return cert;
 }
 
@@ -68,11 +68,11 @@ hibacert_from_ext(struct hibacert *cert, struct hibaext *ext,
 	cert->key->cert->valid_after = validity;
 	if (principal != NULL) {
 		cert->key->cert->nprincipals = 1;
-		cert->key->cert->principals = calloc(sizeof(char*), 1);
+		cert->key->cert->principals = calloc(1, sizeof(char*));
 		cert->key->cert->principals[0] = strdup(principal);
 	}
 	cert->nexts = 1;
-	cert->exts = calloc(sizeof(struct hibaext*), 1);
+	cert->exts = calloc(1, sizeof(struct hibaext*));
 	cert->exts[0] = ext;
 
 	return HIBA_OK;

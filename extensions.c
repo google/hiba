@@ -205,7 +205,7 @@ hibaext_decode(struct hibaext *ext, struct sshbuf *blob) {
 	debug3("hibaext_decode: reading %d pairs", ext->npairs);
 	pair = &ext->pairs;
 	for (i = 0; i < ext->npairs; ++i) {
-		pair->next = calloc(sizeof(struct pair), 1);
+		pair->next = calloc(1, sizeof(struct pair));
 		pair = pair->next;
 		if ((ret = sshbuf_get_cstring(d, &pair->key, NULL)) != 0) {
 			debug3("hibaext_decode: sshbuf_get_cstring returned %d: %s", ret, ssh_err(ret));
@@ -549,7 +549,7 @@ int hibaext_encode(const struct hibaext *ext, struct sshbuf *blob) {
 
 struct hibaext*
 hibaext_new() {
-	struct hibaext *ext = calloc(sizeof(struct hibaext), 1);
+	struct hibaext *ext = calloc(1, sizeof(struct hibaext));
 	return ext;
 }
 
@@ -688,7 +688,7 @@ hibaext_add_pair(struct hibaext *ext, const char *key, const char *value) {
 
 	debug3("hibaext_add_pair: add key '%s' = '%s'", key, value);
 	ext->npairs++;
-	new = calloc(sizeof(struct pair), 1);
+	new = calloc(1, sizeof(struct pair));
 	new->key = strdup(key);
 	new->val = strdup(value);
 	pair = &ext->pairs;

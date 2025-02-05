@@ -74,7 +74,7 @@ hibagrl_free(struct hibagrl *grl) {
 
 struct hibagrl*
 hibagrl_new() {
-	struct hibagrl *grl = calloc(sizeof(struct hibagrl), 1);
+	struct hibagrl *grl = calloc(1, sizeof(struct hibagrl));
 	return grl;
 }
 
@@ -430,7 +430,7 @@ hibagrl_revoke_grant(struct hibagrl *grl, u_int64_t serial, u_int32_t lo, u_int3
 	if (r->size < required_size) {
 		char *prev_map = r->map;
 		debug2("hibagrl_revoke_grant: resizing map to %d", required_size);
-		r->map = calloc(required_size, 1);
+		r->map = calloc(1, required_size);
 		if (prev_map) {
 			/* if we already add revocations for this serial, we
 			 * must copy them. */
