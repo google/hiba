@@ -157,6 +157,8 @@ hibaext_decode(struct hibaext *ext, struct sshbuf *blob) {
 	if (magic != HIBA_MAGIC) {
 		debug3("hibaext_decode: trying base64 decode");
 		d = sshbuf_new();
+		/* sshbuf_b64tod expects a NULL terminated string. */
+		sshbuf_put_u8(blob, '\0');
 		if ((ret = sshbuf_b64tod(d, (const char*)sshbuf_ptr(blob))) < 0) {
 			debug3("hibaext_decode: sshbuf_b64tod returned %d: %s", ret, ssh_err(ret));
 			ret = HIBA_INTERNAL_ERROR;
