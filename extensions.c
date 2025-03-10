@@ -20,6 +20,7 @@
 #include "extensions.h"
 #include "log.h"
 #include "ssherr.h"
+#include "sshbuf.h"
 #include "xmalloc.h"
 
 #define HIBA_CURRENT_VERSION		0x2
