@@ -500,12 +500,9 @@ hibachk_authorized_users_sudoers(const struct hibaenv *env, const struct hibacer
 	int ofile_path_maxlen = 4096;
 	char ofile_path[ofile_path_maxlen];
 
-	verbose("hibachk_authorized_users from sudoers: access granted, generating list of authorized principals");
+	verbose("hibachk_authorized_users from sudoers: access granted, configuring sudoers");
 	for (i = 0; i < hibacert_cert(cert)->nprincipals; ++i) {
-		/* fprintf(f, "%s%s\n", sshbuf_ptr(sudoers), hibacert_cert(cert)->principals[i]); */
-		/* fprintf(f, "%s\n", hibacert_cert(cert)->principals[i]); */
 		snprintf(ofile_path, sizeof(ofile_path), "/etc/sudoers.d/%s", hibacert_cert(cert)->principals[i]);
-		/* Delete file if (file exist) && (nothing was writed there in current hiba-chk execution) */
 		if (access(ofile_path, F_OK) == 0 && !writed) {
 			if (remove(ofile_path) != 0) {
 				fprintf(stderr, "Failed to delete file: %s\n", ofile_path);
@@ -589,7 +586,7 @@ hibachk_authorized_users_groups(const struct hibaenv *env, const struct hibacert
 			sshbuf_put_u8(groups, ' ');
 	sshbuf_put_u8(groups, '\0');
 
-	verbose("hibachk_authorized_users from groups: access granted, generating list of authorized principals");
+	verbose("hibachk_authorized_users(groups): access granted, working with user's groups");
 
 	char cmd[100];
 	strcpy(cmd, "usermod -G \"\" ");
