@@ -99,7 +99,7 @@ The HIBA extensions are identified by the following IDs:
 
 ## Special extension keys
 
-HIBA reserves five extension keys with a special meaning:
+HIBA reserves seven extension keys with a special meaning:
 
 | Key       | Description                                                      |
 | --------- | -----------------------------------------------------------------|
@@ -124,6 +124,11 @@ HIBA reserves five extension keys with a special meaning:
 :           : role available on the target host. The special value @PRINCIPALS :
 :           : will be automatically expanded to the list of principals declared:
 :           : in the certificate.                                              :
+| sudoers   | Content of user's sudoers file. Stored in grant as base64 value, |
+:           : decoded by hiba-chk after successfull grant check                :
+| groups    | User's groups on host. User will be added to these groups after  |
+:           : successfull grant check. Groups should be created preliminary    :
+
 
 ## Special key modifier
 

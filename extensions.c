@@ -822,6 +822,10 @@ hibaext_sanity_check(const struct hibaext *ext) {
 				ret = HIBA_UNEXPECTED_KEY;
 			else if (strcmp(key, HIBA_KEY_VALIDITY) == 0)
 				ret = HIBA_UNEXPECTED_KEY;
+			else if (strcmp(key, HIBA_KEY_SUDOERS) == 0)
+				ret = HIBA_UNEXPECTED_KEY;
+			else if (strcmp(key, HIBA_KEY_GROUPS) == 0)
+				ret = HIBA_UNEXPECTED_KEY;
 			else if (hibaext_value_for_key(ext, key, &v) == HIBA_OK &&
 				 strcmp(value, v) != 0)
 				ret = HIBA_UNEXPECTED_KEY;

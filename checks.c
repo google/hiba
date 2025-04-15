@@ -12,6 +12,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
+#include <memory.h>
+#include <stdio.h>
 
 #include "checks.h"
 #include "config.h"
@@ -281,6 +284,12 @@ hibachk_query(const struct hibaext *identity, const struct hibaext *grant, const
 		if (strcmp(key, HIBA_KEY_OPTIONS) == 0) {
 			debug2("hibachk_query: skipping 'options' key");
 			skip = 1;
+		} else if (strcmp(key, HIBA_KEY_SUDOERS) == 0) {
+			debug2("hibachk_query: skipping 'sudoers' key");
+			skip = 1;
+		} else if (strcmp(key, HIBA_KEY_GROUPS) == 0) {
+			debug2("hibachk_query: skipping 'groups' key");
+			skip = 1;
 		} else if (strcmp(key, HIBA_KEY_VALIDITY) == 0) {
 			debug2("hibachk_query: skipping 'validity' key: already verified");
 			skip = 1;
@@ -417,4 +426,198 @@ void hibachk_authorized_users(const struct hibaenv *env, const struct hibacert *
 
 	fflush(f);
 	sshbuf_free(options);
+}
+
+char base46_map[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+                     'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+                     'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+                     'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'};
+
+char* base64_decode(char* cipher) {
+
+    unsigned int counts = 0;
+    char buffer[4];
+    char* plain = malloc(strlen(cipher) * 3 / 4);
+    int i = 0, p = 0;
+
+    for(i = 0; cipher[i] != '\0'; i++) {
+        unsigned char k;
+        for(k = 0 ; k < 64 && base46_map[k] != cipher[i]; k++);
+        buffer[counts++] = k;
+        if(counts == 4) {
+            plain[p++] = (buffer[0] << 2) + (buffer[1] >> 4);
+            if(buffer[2] != 64)
+                plain[p++] = (buffer[1] << 4) + (buffer[2] >> 2);
+            if(buffer[3] != 64)
+                plain[p++] = (buffer[2] << 6) + buffer[3];
+            counts = 0;
+        }
+    }
+
+    plain[p] = '\0';    /* string padding character */
+    return plain;
+}
+
+bool
+hibachk_authorized_users_sudoers(const struct hibaenv *env, const struct hibacert *cert, int idx, FILE *f, bool writed) {
+	int len;
+	u_int32_t i;
+	struct hibaext *grant;
+	struct hibaext **grants;
+	struct sshbuf *sudoers;
+
+	if (hibacert_hibaexts(cert, &grants, &len) < 0)
+		return writed;
+	if (idx >= len)
+		return writed;
+	grant = grants[idx];
+
+	sudoers = sshbuf_new();
+	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
+		char *key;
+		char *value;
+
+		if (hibaext_key_value_at(grant, i, &key, &value)) {
+			sshbuf_free(sudoers);
+			return writed;
+                }
+
+		if (strcmp(key, HIBA_KEY_SUDOERS) == 0) {
+			int sz = strlen(value);
+
+			if (sshbuf_len(sudoers) > 0)
+				sshbuf_put_u8(sudoers, ',');
+			sshbuf_put(sudoers, value, sz);
+		}
+
+		free(key);
+		free(value);
+	}
+        if (sshbuf_len(sudoers) > 0)
+          sshbuf_put_u8(sudoers, ' ');
+	sshbuf_put_u8(sudoers, '\0');
+
+	int ofile_path_maxlen = 4096;
+	char ofile_path[ofile_path_maxlen];
+
+	verbose("hibachk_authorized_users from sudoers: access granted, generating list of authorized principals");
+	for (i = 0; i < hibacert_cert(cert)->nprincipals; ++i) {
+		/* fprintf(f, "%s%s\n", sshbuf_ptr(sudoers), hibacert_cert(cert)->principals[i]); */
+		/* fprintf(f, "%s\n", hibacert_cert(cert)->principals[i]); */
+		snprintf(ofile_path, sizeof(ofile_path), "/etc/sudoers.d/%s", hibacert_cert(cert)->principals[i]);
+		/* Delete file if (file exist) && (nothing was writed there in current hiba-chk execution) */
+		if (access(ofile_path, F_OK) == 0 && !writed) {
+			if (remove(ofile_path) != 0) {
+				fprintf(stderr, "Failed to delete file: %s\n", ofile_path);
+				sshbuf_free(sudoers);
+				return writed;
+			}
+		}
+		if (sshbuf_len(sudoers) > 0) {
+			FILE *file = fopen(ofile_path, "a");
+			if (file == NULL) {
+				fprintf(stderr, "Failed to open file: %s\n", ofile_path);
+				sshbuf_free(sudoers);
+				return writed;
+			}
+			char *sudoers_copy = strdup((const char *)sshbuf_ptr(sudoers));
+			char *decoded = base64_decode(sudoers_copy);
+			if (decoded == NULL) {
+				fprintf(stderr, "Failed to decode string: %s\n", sudoers_copy);
+				sshbuf_free(sudoers);
+				return writed;
+			}
+			/* Split string */
+			char delim[] = { '\n', '\0' };
+			char *token = strtok(decoded, delim);
+			while (token != NULL) {
+				/* Write into file */
+				fprintf(file, "%s %s\n", hibacert_cert(cert)->principals[i], token);
+				writed = true;
+				token = strtok(NULL, delim);
+			}
+			fclose(file);
+			free(sudoers_copy);
+		}
+	}
+
+	fflush(f);
+	sshbuf_free(sudoers);
+
+	return writed;
+}
+
+/*
+GROUPS PART
+*/
+bool
+hibachk_authorized_users_groups(const struct hibaenv *env, const struct hibacert *cert, int idx, FILE *f, bool writed) {
+	int len;
+	u_int32_t i;
+	struct hibaext *grant;
+	struct hibaext **grants;
+	struct sshbuf *groups;
+
+	if (hibacert_hibaexts(cert, &grants, &len) < 0)
+		return writed;
+	if (idx >= len)
+		return writed;
+	grant = grants[idx];
+
+	groups = sshbuf_new();
+	for (i = 0; i < hibaext_pairs_len(grant); ++i) {
+		char *key;
+		char *value;
+
+		if (hibaext_key_value_at(grant, i, &key, &value)) {
+			sshbuf_free(groups);
+			return writed;
+                }
+
+		if (strcmp(key, HIBA_KEY_GROUPS) == 0) {
+			int sz = strlen(value);
+
+			if (sshbuf_len(groups) > 0)
+				sshbuf_put_u8(groups, ',');
+			sshbuf_put(groups, value, sz);
+		}
+
+		free(key);
+		free(value);
+	}
+        if (sshbuf_len(groups) > 0)
+			sshbuf_put_u8(groups, ' ');
+	sshbuf_put_u8(groups, '\0');
+
+	verbose("hibachk_authorized_users from groups: access granted, generating list of authorized principals");
+
+	char cmd[100];
+	strcpy(cmd, "usermod -G \"\" ");
+	strcat(cmd, hibacert_cert(cert)->principals[0]);
+	int systemRet = system(cmd);
+	if(systemRet != 0){
+		verbose("clearing groups failed");
+	}
+
+	const char *group_str = (const char *)sshbuf_ptr(groups);
+
+	if (group_str && strlen(group_str) > 0) {
+		for (i = 0; i < hibacert_cert(cert)->nprincipals; ++i) {
+			const char *user = hibacert_cert(cert)->principals[i];
+			char add_cmd[256];
+			snprintf(add_cmd, sizeof(add_cmd), "usermod -aG %s %s", group_str, user);
+			verbose("Executing: %s", add_cmd);
+			int systemRet = system(add_cmd);
+			if (systemRet != 0) {
+				verbose("Adding groups failed for user: %s", user);
+			}
+		}
+	} else {
+		verbose("hibachk_authorized_users from groups: group list is empty, skipping usermod.");
+	}
+
+	fflush(f);
+	sshbuf_free(groups);
+
+	return writed;
 }

@@ -9,6 +9,7 @@
 #define _CHECKS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "certificates.h"
 #include "extensions.h"
@@ -30,6 +31,14 @@ int hibachk_authorize(const struct hibaenv *env, const struct hibaext *grant,
  * certificate. */
 void hibachk_authorized_users(const struct hibaenv *env,
                               const struct hibacert *cert, int idx, FILE *f);
+
+/* special function to handle sudoers*/
+bool hibachk_authorized_users_sudoers(const struct hibaenv *env,
+                              const struct hibacert *cert, int idx, FILE *f, bool writed);
+
+/* special function to handle groups*/
+bool hibachk_authorized_users_groups(const struct hibaenv *env,
+                              const struct hibacert *cert, int idx, FILE *f, bool writed);
 
 /* Query whether a grant would be allowed on a machine with the given identity.
  * This function must not be used directly for authorization decisions, as it

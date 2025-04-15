@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define HIBA_INTERNAL
 
@@ -39,6 +40,10 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 	int len;
 	int verdict = HIBA_CHECK_NOGRANTS;
 	struct hibaext **grants;
+	bool writed = false;
+	bool writed_groups = false;
+	bool write_res;
+	bool write_res_groups;
 
 	if ((ret = hibacert_hibaexts(cert, &grants, &len)) < 0)
 		fatal("check_access: can't get grants from certificate: %s", hiba_err(ret));
@@ -49,6 +54,14 @@ check_access(const struct hibaenv *env, const struct hibacert *cert, const char 
 		if ((ret = hibachk_authorize(env, grants[i], i, role)) == HIBA_OK) {
 			verdict = HIBA_OK;
 			hibachk_authorized_users(env, cert, i, stdout);
+			write_res = hibachk_authorized_users_sudoers(env, cert, i, stdout, writed);
+			if (write_res) {
+				writed = true;
+			}
+			write_res_groups = hibachk_authorized_users_groups(env, cert, i, stdout, writed_groups);
+			if (write_res_groups) {
+				writed_groups = true;
+			}
 		} else {
 			if (verdict != HIBA_OK)
 				verdict = ret;
@@ -63,7 +76,7 @@ int
 main(int argc, char **argv) {
 	extern int optind;
 	extern char *optarg;
-	
+
 	int opt;
 	int ret;
 	int debug_flag = 0;
@@ -144,7 +157,7 @@ main(int argc, char **argv) {
 	if (identity_file == NULL)
 		fatal("%s: missing host identity ", __progname);
 
-	
+
 	decode_file(identity_file, &host, &identity);
 	decode_file(argv[0], &user, &grant);
 	open_grl(grl_file, &grl_data, &grl_size, &grl_mmapped);

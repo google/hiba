@@ -38,6 +38,8 @@
 #define HIBA_KEY_VALIDITY "validity"
 #define HIBA_KEY_HOSTNAME "hostname"
 #define HIBA_KEY_OPTIONS "options"
+#define HIBA_KEY_SUDOERS "sudoers"
+#define HIBA_KEY_GROUPS "groups"
 
 /* HIBA key modifier for negative matching constraints. */
 #define HIBA_NEGATIVE_MATCHING '!'
