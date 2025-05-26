@@ -12,8 +12,10 @@
 #include <sys/types.h>
 #include <time.h>
 
-#include "errors.h"
+#include "config.h"
+
 #include "log.h"
+#include "errors.h"
 #include "revocations.h"
 
 #define HIBA_CURRENT_GRL_VERSION	0x1

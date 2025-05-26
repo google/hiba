@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "config.h"
+
 #include "log.h"
 #include "hiba.h"
 #include "misc.h"
