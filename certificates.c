@@ -9,6 +9,8 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "config.h"
+
 #include "extensions.h"
 #include "certificates.h"
 #include "errors.h"

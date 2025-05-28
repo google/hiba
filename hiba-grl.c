@@ -15,6 +15,8 @@
 
 #define HIBA_INTERNAL
 
+#include "config.h"
+
 #include "log.h"
 #include "hiba.h"
 #include "misc.h"

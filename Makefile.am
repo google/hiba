@@ -8,7 +8,7 @@ ACLOCAL_AMFLAGS = -I m4
 ARFLAGS = cr
 AM_LIBTOOLFLAGS = "--preserve-dup-deps"
 
-include_HEADERS = hiba.h extensions.h errors.h checks.h certificates.h revocations.h
+include_HEADERS = hiba.h extensions.h errors.h checks.h certificates.h revocations.h openssh/includes.h
 
 lib_LTLIBRARIES = libhiba.la
 libhiba_la_SOURCES = extensions.c errors.c checks.c certificates.c revocations.c
