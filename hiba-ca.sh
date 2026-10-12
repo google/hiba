@@ -158,7 +158,7 @@ revoke_grants() {
 		echo "Do you want to continue? (y|N)"
 		read ans
 		if [ "$ans" != "y" ]; then
-			return -1
+			return 1
 		fi
 	fi
 	for s in $SERIALS; do
@@ -500,13 +500,13 @@ if [ "$list" = 1 ]; then
 	fi
 	if [ -n "$list_policy" ]; then
 		echo "== HIBA identities (decode using hiba-gen -d -f <filename>) =="
-		for i in $(ls $dest/policy/identities/); do
-			echo "* $dest/policy/identities/$i"
+		for i in "$dest"/policy/identities/*; do
+			echo "* $i"
 		done
 		echo ""
 		echo "== HIBA grants (decode using hiba-gen -d -f <filename>) =="
-		for i in $(ls $dest/policy/grants/); do
-			echo "* $dest/policy/grants/$i"
+		for i in "$dest"/policy/grants/*; do
+			echo "* $i"
 		done
 		echo ""
 	fi
