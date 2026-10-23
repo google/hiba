@@ -5,12 +5,18 @@ m4_define([MAJOR], 1)
 m4_define([MINOR], 4)
 
 AC_PREREQ([2.69])
-AC_INIT([HIBA], [MAJOR.MINOR], [hibassh@google.com])
+AC_INIT([HIBA], [MAJOR.MINOR], [hibassh@google.com], [], [https://github.com/google/hiba])
 AC_CONFIG_SRCDIR([hiba.h])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIRS([m4])
 AC_LANG([C])
 AC_PROG_CC([cc gcc clang])
+
+AH_TOP([#ifndef HIBA_CONFIG_H_
+#define HIBA_CONFIG_H_
+
+#include "openssh/includes.h"])
+AH_BOTTOM([#endif  /* HIBA_CONFIG_H_ */])
 
 LT_INIT
 
@@ -121,13 +127,6 @@ AC_LINK_IFELSE(
 	], [AC_MSG_RESULT([no])],
 )
 LDFLAGS="$save_LDFLAGS"
-
-# Check for definition of max hostname length
-AC_CHECK_DECL(
-	[HOST_NAME_MAX], [], [AC_DEFINE([HOST_NAME_MAX], [64], [
-		Maximum supported hostname size if not already defined by OS.
-	])], [#include <limits.h>],
-)
 
 # Update flags.
 CFLAGS="$CFLAGS $extra_CFLAGS"
@@ -295,6 +294,15 @@ AC_SEARCH_LIBS([sshbuf_new], [ssh], [], [
 )
 AC_SUBST([extra_LIBS], [$LIBS])
 LIBS="$save_LIBS"
+
+# Check for definition of max hostname length
+# If undefined, it could still be provided by OpenSSH headers.
+AC_CHECK_DECL([HOST_NAME_MAX], [], AH_VERBATIM([HOST_NAME_MAX],
+	[/* Maximum supported hostname size if not already defined. */
+#ifndef HOST_NAME_MAX
+#define HOST_NAME_MAX 64
+#endif]), [#include <limits.h>],
+)
 
 # Checks for header files.
 AC_CHECK_HEADERS([inttypes.h limits.h stdint.h stdlib.h string.h sys/types.h unistd.h])

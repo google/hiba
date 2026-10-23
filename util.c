@@ -14,8 +14,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "config.h"
+
+#include "certificates.h"
+#include "errors.h"
+#include "extensions.h"
 #include "log.h"
-#include "hiba.h"
 #include "misc.h"
 #include "openbsd-compat/bsd-misc.h"
 #include "ssherr.h"

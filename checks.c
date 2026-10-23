@@ -14,8 +14,9 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "checks.h"
 #include "config.h"
+
+#include "checks.h"
 #include "errors.h"
 #include "extensions.h"
 #include "log.h"

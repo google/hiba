@@ -6,7 +6,6 @@
  * https://developers.google.com/open-source/licenses/bsd
  */
 #include "errors.h"
-#include "ssherr.h"
 
 const char *hiba_err(int err) {
 	if (err == HIBA_OK)
